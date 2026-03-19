@@ -5,7 +5,7 @@ import pandas as pd
 
 st.set_page_config(page_title="Makroekonomický simulátor rozpočtu", layout="wide")
 st.title("🏛️ Simulátor státního rozpočtu")
-st.markdown("*Interaktivní nástroj pro výuku makroekonomie – 1. ročník VŠ*")
+st.markdown("*Interaktivní nástroj pro výuku makroekonomie*")
 
 # Calibrated presets (general government, 2024 data)
 # consumption_share = share of GDP that is VAT-taxable consumption
