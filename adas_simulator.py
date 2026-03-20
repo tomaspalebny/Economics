@@ -271,8 +271,9 @@ if ss.phase in ("shock_shown", "pre_shock"):
 
     col_graph, col_status = st.columns([3, 1])
     with col_graph:
+        chart_title = f"Kolo {ss.round}: Po šoku {sh['name']} - PRED vasi reakci"
         fig = plot_adas(ss.Y_n, ss.ad_shift, ss.sras_shift, Y_eq, P_eq, ss.prev_ad, ss.prev_sras,
-                        title=f"Kolo {ss.round}: Po šoku '{sh['name']}" - PŘED vaší reakcí")
+                        title=chart_title)
         st.plotly_chart(fig, use_container_width=True)
 
     with col_status:
