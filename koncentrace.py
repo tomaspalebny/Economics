@@ -14,7 +14,6 @@ st.sidebar.header("⚙️ Firmy na trhu")
 if "firms" not in st.session_state:
     st.session_state.firms = {"Firma A": 40.0, "Firma B": 20.0, "Firma C": 15.0, "Firma D": 10.0, "Firma E": 8.0}
 
-# Add / remove firms
 with st.sidebar.expander("➕ Přidat / ➖ Odebrat firmu"):
     new_name = st.text_input("Název nové firmy", key="new_name")
     new_share = st.number_input("Podíl (%)", 0.0, 100.0, 5.0, key="new_share")
@@ -26,7 +25,6 @@ with st.sidebar.expander("➕ Přidat / ➖ Odebrat firmu"):
         del st.session_state.firms[rm]
         st.rerun()
 
-# Merger
 with st.sidebar.expander("🤝 Fúze dvou firem"):
     names = list(st.session_state.firms.keys())
     if len(names) >= 2:
@@ -38,7 +36,6 @@ with st.sidebar.expander("🤝 Fúze dvou firem"):
             st.session_state.firms[merged_name] = new_share
             st.rerun()
 
-# Presets
 with st.sidebar.expander("📦 Ukázkové scénáře"):
     presets = {
         "AquaPlus (minerální voda)": {"AquaPlus": 44, "FreshSpring": 19, "CrystalWater": 14, "NaturaDrink": 9, "PureDrop": 7},
@@ -55,9 +52,8 @@ with st.sidebar.expander("📦 Ukázkové scénáře"):
 
 st.sidebar.divider()
 st.sidebar.subheader("Tržní podíly (%)")
-st.sidebar.caption("⚖️ **Ostatní** se automaticky dorovnávají na 100 %")
+st.sidebar.caption("⚖️ **Ostatní** = zbytek do 100 % (nezahrnují se do CR4 ani HHI)")
 
-# Sliders for all named firms
 updated = {}
 for name, share in st.session_state.firms.items():
     updated[name] = st.sidebar.slider(name, 0.0, 100.0, float(share), 0.5, key=f"sl_{name}")
@@ -75,20 +71,21 @@ st.sidebar.metric("Ostatní (dopočet)", f"{ostatni_share:.1f} %")
 
 st.session_state.firms = updated
 
-# Build full market including Ostatní
+# --- Calculations: ONLY named firms, NOT "Ostatní" ---
+firm_shares_pct = np.array(sorted(updated.values(), reverse=True))
+n = len(firm_shares_pct)
+cr4 = float(firm_shares_pct[:4].sum()) if n >= 4 else float(firm_shares_pct.sum())
+hhi = float((firm_shares_pct**2).sum())
+s1 = firm_shares_pct[0] if n > 0 else 0
+s2 = firm_shares_pct[1] if n > 1 else 0
+gap = s1 - s2
+ratio = s1 / s2 if s2 > 0 else float('inf')
+
+# For display: include Ostatní
 all_shares = dict(updated)
 if ostatni_share > 0:
     all_shares["Ostatní"] = ostatni_share
 total = sum(all_shares.values())
-
-shares_pct = np.array(sorted(all_shares.values(), reverse=True))
-n = len(shares_pct)
-cr4 = float(shares_pct[:4].sum()) if n >= 4 else float(shares_pct.sum())
-hhi = float((shares_pct**2).sum())
-s1 = shares_pct[0] if n > 0 else 0
-s2 = shares_pct[1] if n > 1 else 0
-gap = s1 - s2
-ratio = s1 / s2 if s2 > 0 else float('inf')
 
 if not valid or abs(total - 100.0) > 0.5:
     st.error(f"⚠️ Součet podílů = {total:.1f} % ≠ 100 %. Upravte podíly v postranním panelu!")
@@ -101,6 +98,8 @@ col1.metric("Součet podílů", f"{total:.1f} %", delta="OK ✓")
 col2.metric("CR4", f"{cr4:.1f} %")
 col3.metric("HHI", f"{hhi:.0f}")
 col4.metric("Gap test signál", signal)
+
+st.info(f"ℹ️ CR4 a HHI se počítají pouze z **{n} pojmenovaných firem** (bez kategorie Ostatní = {ostatni_share:.1f} %).")
 
 c1, c2 = st.columns([1, 1])
 
@@ -141,9 +140,9 @@ with st.expander("📋 Detailní výpočty"):
     detail = pd.DataFrame({
         "Firma": list(all_shares.keys()),
         "Podíl (%)": list(all_shares.values()),
-        "Podíl²": [v**2 for v in all_shares.values()],
+        "Zahrnuto v CR4/HHI": ["✅ Ano" if f != "Ostatní" else "❌ Ne" for f in all_shares.keys()],
+        "Podíl²": [v**2 if f != "Ostatní" else 0 for f, v in all_shares.items()],
     }).sort_values("Podíl (%)", ascending=False)
-    detail["Kumulativní podíl (%)"] = detail["Podíl (%)"].cumsum()
     st.dataframe(detail, use_container_width=True, hide_index=True)
     st.markdown(f"""
 | Ukazatel | Hodnota | Interpretace |
@@ -165,13 +164,17 @@ Součet tržních podílů 4 největších firem.
 - 60–80 % → střední koncentrace
 - \> 80 % → vysoká koncentrace
 
+**Pozn.:** Do CR4 se zahrnují pouze pojmenované firmy, ne kategorie „Ostatní".
+
 ### HHI (Herfindahl-Hirschmanův index)
-Součet čtverců tržních podílů všech firem (v %).
+Součet čtverců tržních podílů všech **identifikovaných** firem (v %).
 $$HHI = \sum_{i=1}^{n} s_i^2$$
 - < 1 500 → nízká koncentrace
 - 1 500–2 500 → střední koncentrace
 - \> 2 500 → vysoká koncentrace (oligopol/monopol)
 - Maximální hodnota = 10 000 (monopol)
+
+**Pozn.:** Kategorie „Ostatní" (agregát drobných hráčů) se do HHI nezahrnuje, protože neznáme podíly jednotlivých firem v ní obsažených. Jejich individuální podíly² by byly zanedbatelné.
 
 ### Gap test (heuristika dominance)
 Rychlý screening pro posouzení dominantního postavení:
