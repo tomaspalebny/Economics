@@ -2,130 +2,102 @@ import streamlit as st
 import plotly.graph_objects as go
 import numpy as np
 import random
-import json
 
 st.set_page_config(page_title="AD-AS Simulátor s náhodnými šoky", layout="wide")
 st.title("📈 AD-AS Model: Simulátor s náhodnými šoky")
 st.markdown("*Interaktivní hra pro výuku makroekonomie – reagujte na ekonomické šoky fiskální a monetární politikou*")
 
-# ========== SESSION STATE ==========
-if "round" not in st.session_state:
-    st.session_state.round = 0
-    st.session_state.history = []
-    st.session_state.shock = None
-    st.session_state.shock_applied = False
-    st.session_state.score = 0
-    st.session_state.game_active = False
-    # Baseline equilibrium
-    st.session_state.Y_n = 100       # potential output (LRAS)
-    st.session_state.Y = 100         # current real GDP
-    st.session_state.P = 100         # current price level
-    st.session_state.pi = 2.0        # inflation %
-    st.session_state.u = 5.0         # unemployment %
-    st.session_state.u_n = 5.0       # natural unemployment
-    st.session_state.i = 3.0         # interest rate %
-    # AD-AS shift accumulators
-    st.session_state.ad_shift = 0
-    st.session_state.sras_shift = 0
+# ========== SESSION STATE INIT ==========
+DEFAULTS = dict(
+    round=0, history=[], score=0, game_active=False,
+    Y_n=100, ad_shift=0, sras_shift=0,
+    phase="idle",  # idle → shock_shown → responded
+    shock=None, n_rounds=8, difficulty=1.0,
+    prev_ad=0, prev_sras=0,
+)
+for k, v in DEFAULTS.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+ss = st.session_state
 
 # ========== SHOCK LIBRARY ==========
 SHOCKS = [
-    {"name": "🛢️ Ropná krize", "desc": "Cena ropy vzrostla o 80%. Náklady firem prudce rostou.", "type": "supply", "sras": +12, "ad": -3, "icon": "🛢️"},
-    {"name": "🦠 Pandemie", "desc": "Nová vlna pandemie uzavírá ekonomiku. Klesá spotřeba i výroba.", "type": "both", "sras": +8, "ad": -15, "icon": "🦠"},
-    {"name": "🚀 Technologický boom", "desc": "Průlomová technologie zvyšuje produktivitu o 20%.", "type": "supply", "sras": -10, "ad": +5, "icon": "🚀"},
-    {"name": "💰 Spotřebitelský optimismus", "desc": "Důvěra spotřebitelů na historickém maximu. Rostou výdaje domácností.", "type": "demand", "sras": 0, "ad": +12, "icon": "💰"},
-    {"name": "📉 Finanční krize", "desc": "Krach na burze, banky omezují úvěry. Investice dramaticky klesají.", "type": "demand", "sras": +3, "ad": -18, "icon": "📉"},
-    {"name": "🌾 Neúroda a potravinová krize", "desc": "Extrémní sucho zdražuje potraviny a zvyšuje výrobní náklady.", "type": "supply", "sras": +9, "ad": -2, "icon": "🌾"},
-    {"name": "🏗️ Investiční boom", "desc": "Masivní příliv zahraničních investic do ekonomiky.", "type": "demand", "sras": -2, "ad": +14, "icon": "🏗️"},
-    {"name": "⚔️ Geopolitická krize", "desc": "Válečný konflikt narušuje dodavatelské řetězce a zvyšuje nejistotu.", "type": "both", "sras": +10, "ad": -8, "icon": "⚔️"},
-    {"name": "💶 Měnová krize", "desc": "Domácí měna oslabila o 25%. Import dramaticky zdražuje.", "type": "both", "sras": +7, "ad": -5, "icon": "💶"},
-    {"name": "🎓 Reforma vzdělávání", "desc": "Masivní investice do vzdělávání zvyšují kvalifikaci pracovní síly.", "type": "supply", "sras": -6, "ad": +3, "icon": "🎓"},
-    {"name": "🏠 Prasknutí realitní bubliny", "desc": "Ceny nemovitostí padají o 30%. Domácnosti omezují spotřebu.", "type": "demand", "sras": 0, "ad": -14, "icon": "🏠"},
-    {"name": "⚡ Energetická transformace", "desc": "Přechod na OZE dočasně zvyšuje náklady, ale roste produktivita.", "type": "both", "sras": +4, "ad": +6, "icon": "⚡"},
+    {"name": "Ropná krize", "desc": "Cena ropy vzrostla o 80 %. Firmy čelí prudce rostoucím nákladům na dopravu a výrobu.", "type": "supply", "sras": +12, "ad": -3, "icon": "🛢️",
+     "explain": "Růst cen energie **zvyšuje výrobní náklady** → křivka SRAS se posouvá nahoru (doleva). Drahá energie částečně tlumí i poptávku."},
+    {"name": "Pandemie", "desc": "Nová vlna pandemie uzavírá ekonomiku. Klesá spotřeba domácností i výroba firem.", "type": "both", "sras": +8, "ad": -15, "icon": "🦠",
+     "explain": "Lockdowny **snižují poptávku** (AD doleva) a zároveň **narušují výrobu** (SRAS nahoru). Kombinovaný šok je nejtěžší na řešení."},
+    {"name": "Technologický boom", "desc": "Průlomová technologie (AI) zvyšuje produktivitu firem o 20 %.", "type": "supply", "sras": -10, "ad": +5, "icon": "🚀",
+     "explain": "Vyšší produktivita **snižuje jednotkové náklady** → SRAS se posouvá dolů (doprava). Optimismus firem mírně zvyšuje investice (AD doprava)."},
+    {"name": "Spotřebitelský optimismus", "desc": "Důvěra spotřebitelů na historickém maximu – domácnosti utrácejí a berou si úvěry.", "type": "demand", "sras": 0, "ad": +12, "icon": "💰",
+     "explain": "Rostoucí spotřeba a investice **zvyšují agregátní poptávku** → AD se posouvá doprava. SRAS se nemění – náklady firem zůstávají stejné."},
+    {"name": "Finanční krize", "desc": "Krach na burze, banky omezují úvěry. Firmy i domácnosti odkládají investice a nákupy.", "type": "demand", "sras": +3, "ad": -18, "icon": "📉",
+     "explain": "Pokles investic a spotřeby **prudce snižuje AD** (doleva). Zpřísnění úvěrů mírně zvyšuje náklady financování firem (SRAS mírně nahoru)."},
+    {"name": "Neúroda a potravinová krize", "desc": "Extrémní sucho zdražuje potraviny a zvyšuje výrobní náklady v potravinářství.", "type": "supply", "sras": +9, "ad": -2, "icon": "🌾",
+     "explain": "Dražší vstupy **zvyšují náklady výrobců** → SRAS nahoru. Dražší potraviny mírně snižují reálné příjmy domácností (AD mírně doleva)."},
+    {"name": "Investiční boom", "desc": "Masivní příliv zahraničních investic – otevírají se nové továrny a centra.", "type": "demand", "sras": -2, "ad": +14, "icon": "🏗️",
+     "explain": "Investice **zvyšují poptávku** (AD doprava) a zároveň mírně rozšiřují výrobní kapacity (SRAS mírně dolů)."},
+    {"name": "Geopolitická krize", "desc": "Válečný konflikt v blízkém regionu narušuje dodavatelské řetězce a zvyšuje nejistotu.", "type": "both", "sras": +10, "ad": -8, "icon": "⚔️",
+     "explain": "Narušení dodávek **zvyšuje náklady** (SRAS nahoru). Nejistota **snižuje spotřebu a investice** (AD doleva). Klasický stagflační scénář."},
+    {"name": "Měnová krize", "desc": "Domácí měna oslabila o 25 %. Veškerý import dramaticky zdražuje.", "type": "both", "sras": +7, "ad": -5, "icon": "💶",
+     "explain": "Dražší import **zvyšuje výrobní náklady** (SRAS nahoru) a zároveň **snižuje kupní sílu** domácností (AD doleva)."},
+    {"name": "Reforma vzdělávání", "desc": "Masivní investice do vzdělávání zvyšují kvalifikaci a produktivitu pracovní síly.", "type": "supply", "sras": -6, "ad": +3, "icon": "🎓",
+     "explain": "Kvalifikovanější pracovníci **snižují jednotkové náklady** (SRAS dolů). Vyšší příjmy mírně zvyšují spotřebu (AD doprava). Pozitivní nabídkový šok."},
+    {"name": "Prasknutí realitní bubliny", "desc": "Ceny nemovitostí padají o 30 %. Domácnosti se cítí chudší a omezují spotřebu.", "type": "demand", "sras": 0, "ad": -14, "icon": "🏠",
+     "explain": "Efekt bohatství: pokles hodnoty majetku **snižuje spotřebu** → AD prudce doleva. Výrobní náklady se nemění, SRAS zůstává."},
+    {"name": "Energetická transformace", "desc": "Přechod na obnovitelné zdroje: krátkodobě rostou náklady, ale klesá závislost na dovozu.", "type": "both", "sras": +4, "ad": +6, "icon": "⚡",
+     "explain": "Investice do OZE **zvyšují poptávku** (AD doprava), ale přechodné náklady **zvyšují ceny** (SRAS mírně nahoru)."},
 ]
 
-# ========== MODEL EQUATIONS ==========
-def compute_equilibrium(Y_n, ad_shift, sras_shift):
-    """
-    Simple linear AD-AS model:
-    AD: P = (200 + ad_shift) - Y        (downward sloping)
-    SRAS: P = (0 + sras_shift) + 0.5*Y  (upward sloping)
-    LRAS: Y = Y_n (vertical)
-
-    Short-run EQ: solve AD = SRAS
-    200 + ad_shift - Y = sras_shift + 0.5*Y
-    200 + ad_shift - sras_shift = 1.5*Y
+# ========== MODEL ==========
+def compute_eq(Y_n, ad_shift, sras_shift):
     Y = (200 + ad_shift - sras_shift) / 1.5
     P = sras_shift + 0.5 * Y
-    """
-    Y_eq = (200 + ad_shift - sras_shift) / 1.5
-    P_eq = sras_shift + 0.5 * Y_eq
+    og = (Y - Y_n) / Y_n * 100
+    inf = 2.0 + og * 0.4 + sras_shift * 0.15
+    un = max(0.5, 5.0 - og * 0.5)
+    return Y, P, og, inf, un
 
-    # Derived macro variables
-    output_gap = (Y_eq - Y_n) / Y_n * 100  # %
-    inflation = 2.0 + output_gap * 0.4 + sras_shift * 0.15  # simplified Phillips curve
-    unemployment = 5.0 - output_gap * 0.5  # Okun's law approx
-    unemployment = max(0.5, unemployment)
+def score(og, inf):
+    return round(max(0, 100 - abs(og) * 3 - abs(inf - 2.0) * 5))
 
-    return Y_eq, P_eq, output_gap, inflation, unemployment
-
-def compute_score(output_gap, inflation):
-    """Score: penalize deviation from targets (Y_gap=0, inflation=2%)"""
-    gap_penalty = abs(output_gap) * 3
-    inflation_penalty = abs(inflation - 2.0) * 5
-    score = max(0, 100 - gap_penalty - inflation_penalty)
-    return round(score)
-
-def plot_adas(Y_n, ad_shift, sras_shift, Y_eq, P_eq, prev_ad=None, prev_sras=None):
-    """Plot AD, SRAS, LRAS curves and equilibrium"""
-    Y_range = np.linspace(40, 160, 200)
-
-    # Current curves
-    AD = (200 + ad_shift) - Y_range
-    SRAS = (sras_shift) + 0.5 * Y_range
-
+def plot_adas(Y_n, ad_shift, sras_shift, Y_eq, P_eq, prev_ad=None, prev_sras=None, title=""):
+    Yr = np.linspace(40, 160, 200)
+    AD = (200 + ad_shift) - Yr
+    SRAS = sras_shift + 0.5 * Yr
     fig = go.Figure()
 
-    # Previous curves (faded) if provided
     if prev_ad is not None:
-        AD_prev = (200 + prev_ad) - Y_range
-        SRAS_prev = (prev_sras) + 0.5 * Y_range
-        fig.add_trace(go.Scatter(x=Y_range, y=AD_prev, mode="lines", name="AD (před)", line=dict(color="rgba(99,102,241,0.25)", width=2, dash="dot")))
-        fig.add_trace(go.Scatter(x=Y_range, y=SRAS_prev, mode="lines", name="SRAS (před)", line=dict(color="rgba(239,68,68,0.25)", width=2, dash="dot")))
+        AD0 = (200 + prev_ad) - Yr
+        SRAS0 = prev_sras + 0.5 * Yr
+        Y0 = (200 + prev_ad - prev_sras) / 1.5
+        P0 = prev_sras + 0.5 * Y0
+        fig.add_trace(go.Scatter(x=Yr, y=AD0, mode="lines", name="AD předtím", line=dict(color="rgba(99,102,241,0.25)", width=2, dash="dot")))
+        fig.add_trace(go.Scatter(x=Yr, y=SRAS0, mode="lines", name="SRAS předtím", line=dict(color="rgba(239,68,68,0.25)", width=2, dash="dot")))
+        fig.add_trace(go.Scatter(x=[Y0], y=[P0], mode="markers", name="Předchozí rovnováha",
+                                 marker=dict(size=10, color="rgba(245,158,11,0.35)", symbol="diamond")))
 
-    # LRAS
     fig.add_trace(go.Scatter(x=[Y_n, Y_n], y=[40, 170], mode="lines", name=f"LRAS (Yₙ={Y_n:.0f})", line=dict(color="#22c55e", width=3, dash="dash")))
-
-    # Current AD & SRAS
-    fig.add_trace(go.Scatter(x=Y_range, y=AD, mode="lines", name="AD", line=dict(color="#6366f1", width=3)))
-    fig.add_trace(go.Scatter(x=Y_range, y=SRAS, mode="lines", name="SRAS", line=dict(color="#ef4444", width=3)))
-
-    # Equilibrium point
+    fig.add_trace(go.Scatter(x=Yr, y=AD, mode="lines", name="AD", line=dict(color="#6366f1", width=3)))
+    fig.add_trace(go.Scatter(x=Yr, y=SRAS, mode="lines", name="SRAS", line=dict(color="#ef4444", width=3)))
     fig.add_trace(go.Scatter(x=[Y_eq], y=[P_eq], mode="markers+text", name="Rovnováha",
                              marker=dict(size=14, color="#f59e0b", symbol="diamond"),
                              text=[f"Y={Y_eq:.1f}, P={P_eq:.1f}"], textposition="top right",
                              textfont=dict(size=13, color="#f59e0b")))
-
-    # Dashed lines to axes
     fig.add_trace(go.Scatter(x=[Y_eq, Y_eq], y=[40, P_eq], mode="lines", showlegend=False, line=dict(color="#f59e0b", width=1, dash="dot")))
     fig.add_trace(go.Scatter(x=[40, Y_eq], y=[P_eq, P_eq], mode="lines", showlegend=False, line=dict(color="#f59e0b", width=1, dash="dot")))
 
-    # Shade recession / overheating
     if Y_eq < Y_n - 1:
         fig.add_vrect(x0=Y_eq, x1=Y_n, fillcolor="rgba(239,68,68,0.08)", line_width=0, annotation_text="Recesní mezera", annotation_position="top")
     elif Y_eq > Y_n + 1:
         fig.add_vrect(x0=Y_n, x1=Y_eq, fillcolor="rgba(249,115,22,0.08)", line_width=0, annotation_text="Inflační mezera", annotation_position="top")
 
     fig.update_layout(
-        height=500,
-        xaxis=dict(title="Reálný HDP (Y)", range=[40, 160], gridcolor="rgba(100,100,100,0.2)"),
+        title=dict(text=title, font=dict(size=16)),
+        height=480, xaxis=dict(title="Reálný HDP (Y)", range=[40, 160], gridcolor="rgba(100,100,100,0.2)"),
         yaxis=dict(title="Cenová hladina (P)", range=[40, 170], gridcolor="rgba(100,100,100,0.2)"),
-        plot_bgcolor="rgba(15,23,42,0.5)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#e2e8f0"),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02),
-        margin=dict(t=60, b=60)
-    )
+        plot_bgcolor="rgba(15,23,42,0.5)", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#e2e8f0"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02), margin=dict(t=60, b=60))
     return fig
 
 def plot_history(history):
@@ -134,279 +106,291 @@ def plot_history(history):
     rounds = [h["round"] for h in history]
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=rounds, y=[h["Y"] for h in history], mode="lines+markers", name="HDP (Y)", line=dict(color="#6366f1", width=2)))
-    fig.add_trace(go.Scatter(x=rounds, y=[h["P"] for h in history], mode="lines+markers", name="Cenová hladina (P)", line=dict(color="#ef4444", width=2)))
+    fig.add_trace(go.Scatter(x=rounds, y=[h["P"] for h in history], mode="lines+markers", name="Cen. hladina (P)", line=dict(color="#ef4444", width=2)))
     fig.add_trace(go.Scatter(x=rounds, y=[h["inflation"] for h in history], mode="lines+markers", name="Inflace (%)", line=dict(color="#f59e0b", width=2)))
     fig.add_trace(go.Scatter(x=rounds, y=[h["unemployment"] for h in history], mode="lines+markers", name="Nezaměstnanost (%)", line=dict(color="#22c55e", width=2)))
     fig.add_hline(y=100, line_dash="dash", line_color="rgba(255,255,255,0.2)", annotation_text="Potenciální produkt")
-    fig.add_hline(y=2, line_dash="dash", line_color="rgba(255,255,255,0.15)", annotation_text="Inflační cíl 2%")
-    fig.update_layout(
-        height=350,
-        plot_bgcolor="rgba(15,23,42,0.5)", paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#e2e8f0"),
-        xaxis=dict(title="Kolo", dtick=1, gridcolor="rgba(100,100,100,0.2)"),
-        yaxis=dict(gridcolor="rgba(100,100,100,0.2)"),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02),
-        margin=dict(t=60, b=40)
-    )
+    fig.add_hline(y=2, line_dash="dash", line_color="rgba(255,255,255,0.15)", annotation_text="Inflační cíl 2 %")
+    fig.update_layout(height=320, plot_bgcolor="rgba(15,23,42,0.5)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#e2e8f0"), xaxis=dict(title="Kolo", dtick=1, gridcolor="rgba(100,100,100,0.2)"),
+        yaxis=dict(gridcolor="rgba(100,100,100,0.2)"), legend=dict(orientation="h", yanchor="bottom", y=1.02), margin=dict(t=50, b=40))
     return fig
 
-# ========== GAME FLOW ==========
+# ========== SIDEBAR ==========
 st.sidebar.header("🎮 Ovládání hry")
 
-if not st.session_state.game_active:
-    st.sidebar.markdown("### Pravidla")
-    st.sidebar.markdown("""
-    1. Každé kolo přijde **náhodný ekonomický šok**
-    2. Vidíte posun křivek AD/SRAS v grafu
-    3. Reagujete **fiskální a monetární politikou**
-    4. Cíl: udržet HDP blízko potenciálu a inflaci kolem 2%
-    5. Za každé kolo dostanete **skóre 0–100**
-    """)
+# --- PHASE: IDLE (no game) ---
+if not ss.game_active and ss.phase == "idle":
+    st.sidebar.markdown("### Nastavení hry")
     difficulty = st.sidebar.selectbox("Obtížnost", ["🟢 Lehká (malé šoky)", "🟡 Střední", "🔴 Těžká (velké šoky)"])
     n_rounds = st.sidebar.selectbox("Počet kol", [5, 8, 10, 15], index=1)
 
     if st.sidebar.button("🚀 Začít novou hru", use_container_width=True):
-        st.session_state.round = 0
-        st.session_state.history = []
-        st.session_state.shock = None
-        st.session_state.shock_applied = False
-        st.session_state.score = 0
-        st.session_state.game_active = True
-        st.session_state.ad_shift = 0
-        st.session_state.sras_shift = 0
-        st.session_state.n_rounds = n_rounds
         diff_map = {"🟢 Lehká (malé šoky)": 0.5, "🟡 Střední": 1.0, "🔴 Těžká (velké šoky)": 1.5}
-        st.session_state.difficulty = diff_map[difficulty]
-        # Record baseline
-        Y_eq, P_eq, og, inf, un = compute_equilibrium(100, 0, 0)
-        st.session_state.history.append({"round": 0, "Y": Y_eq, "P": P_eq, "inflation": inf, "unemployment": un, "output_gap": og, "score": 100, "shock": "Výchozí stav", "policy": "-"})
+        for k, v in DEFAULTS.items():
+            ss[k] = v
+        ss.game_active = True
+        ss.n_rounds = n_rounds
+        ss.difficulty = diff_map[difficulty]
+        ss.phase = "pre_shock"
+        ss.round = 0
+        Y0, P0, og0, inf0, un0 = compute_eq(100, 0, 0)
+        ss.history = [dict(round=0, Y=Y0, P=P0, inflation=inf0, unemployment=un0, output_gap=og0, score=100, shock="—", policy="—")]
         st.rerun()
 
-if st.session_state.game_active:
-    ss = st.session_state
-    n_rounds = ss.n_rounds
+# --- PHASE: PRE_SHOCK → generate shock ---
+if ss.game_active and ss.phase == "pre_shock":
+    ss.round += 1
+    shock = random.choice(SHOCKS).copy()
+    shock["sras"] = round(shock["sras"] * ss.difficulty + random.gauss(0, 1.5), 1)
+    shock["ad"] = round(shock["ad"] * ss.difficulty + random.gauss(0, 1.5), 1)
+    ss.shock = shock
+    ss.prev_ad = ss.ad_shift
+    ss.prev_sras = ss.sras_shift
+    ss.ad_shift += shock["ad"]
+    ss.sras_shift += shock["sras"]
+    ss.phase = "shock_shown"
+    st.rerun()
 
-    # Generate shock if needed
-    if ss.shock is None and ss.round < n_rounds:
-        ss.round += 1
-        shock = random.choice(SHOCKS).copy()
-        shock["sras"] = round(shock["sras"] * ss.difficulty + random.gauss(0, 2), 1)
-        shock["ad"] = round(shock["ad"] * ss.difficulty + random.gauss(0, 2), 1)
-        ss.shock = shock
-        ss.shock_applied = False
-        # Apply shock
-        ss.ad_shift += shock["ad"]
-        ss.sras_shift += shock["sras"]
-        ss.prev_ad = ss.ad_shift - shock["ad"]
-        ss.prev_sras = ss.sras_shift - shock["sras"]
+# --- PHASE: SHOCK_SHOWN → student responds ---
+if ss.game_active and ss.phase == "shock_shown":
+    sh = ss.shock
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"### Kolo {ss.round} / {ss.n_rounds}")
+    st.sidebar.markdown(f"## {sh['icon']} {sh['name']}")
 
-    # Current state
-    Y_eq, P_eq, og, inf, un = compute_equilibrium(ss.Y_n, ss.ad_shift, ss.sras_shift)
+    st.sidebar.markdown("### 🏛️ Fiskální politika")
+    fiscal = st.sidebar.number_input("Změna vládních výdajů (% HDP)", -15.0, 15.0, 0.0, 0.5, format="%.1f",
+        help="Kladné = expanze (více utrácíte), záporné = úspory")
+    tax_ch = st.sidebar.number_input("Změna daní (% HDP)", -10.0, 10.0, 0.0, 0.5, format="%.1f",
+        help="Kladné = vyšší daně (restriktivní), záporné = nižší daně (expanzivní)")
 
-    # SIDEBAR: Policy response
-    if ss.shock and not ss.shock_applied and ss.round <= n_rounds:
-        st.sidebar.markdown("---")
-        st.sidebar.markdown(f"### Kolo {ss.round}/{n_rounds}")
-        st.sidebar.markdown(f"## {ss.shock['icon']} {ss.shock['name']}")
-        st.sidebar.info(ss.shock["desc"])
+    st.sidebar.markdown("### 🏦 Monetární politika")
+    rate_ch = st.sidebar.number_input("Změna úrokové sazby (p.b.)", -5.0, 5.0, 0.0, 0.25, format="%.2f",
+        help="Kladné = vyšší sazby (restriktivní), záporné = nižší (expanzivní)")
 
-        st.sidebar.markdown("### 🏛️ Vaše reakce – fiskální politika")
-        fiscal = st.sidebar.number_input("Změna vládních výdajů (% HDP)", min_value=-15.0, max_value=15.0, value=0.0, step=0.5, format="%.1f",
-                                          help="+ = expanzivní (více výdajů), - = restriktivní (škrty)")
-        tax_change = st.sidebar.number_input("Změna daní (% HDP)", min_value=-10.0, max_value=10.0, value=0.0, step=0.5, format="%.1f",
-                                              help="+ = zvýšení daní (restriktivní), - = snížení (expanzivní)")
+    if st.sidebar.button("✅ Potvrdit rozhodnutí", use_container_width=True):
+        pol_ad = fiscal * 1.2 - tax_ch * 0.8 - rate_ch * 2.5
+        pol_sras = tax_ch * 0.3 + rate_ch * 0.2
+        ss.ad_shift += pol_ad
+        ss.sras_shift += pol_sras
+        ss.ad_shift *= 0.85
+        ss.sras_shift *= 0.85
 
-        st.sidebar.markdown("### 🏦 Monetární politika")
-        rate_change = st.sidebar.number_input("Změna úrokové sazby (p.b.)", min_value=-5.0, max_value=5.0, value=0.0, step=0.25, format="%.2f",
-                                               help="+ = restriktivní, - = expanzivní")
+        Y, P, og, inf, un = compute_eq(ss.Y_n, ss.ad_shift, ss.sras_shift)
+        sc = score(og, inf)
+        ss.score += sc
 
-        if st.sidebar.button("✅ Potvrdit rozhodnutí", use_container_width=True):
-            # Policy effects on AD and SRAS
-            policy_ad = fiscal * 1.2 - tax_change * 0.8 - rate_change * 2.5
-            policy_sras = tax_change * 0.3 + rate_change * 0.2
+        pdesc = []
+        if fiscal != 0: pdesc.append(f"Výdaje {fiscal:+.1f} %")
+        if tax_ch != 0: pdesc.append(f"Daně {tax_ch:+.1f} %")
+        if rate_ch != 0: pdesc.append(f"Úrok {rate_ch:+.2f} p.b.")
+        if not pdesc: pdesc = ["Bez zásahu"]
 
-            ss.ad_shift += policy_ad
-            ss.sras_shift += policy_sras
+        ss.history.append(dict(round=ss.round, Y=round(Y, 1), P=round(P, 1), inflation=round(inf, 1),
+            unemployment=round(un, 1), output_gap=round(og, 1), score=sc,
+            shock=f"{sh['icon']} {sh['name']}", policy=", ".join(pdesc)))
 
-            # Partial mean reversion (economy self-corrects slowly)
-            ss.ad_shift *= 0.85
-            ss.sras_shift *= 0.85
+        if ss.round >= ss.n_rounds:
+            ss.phase = "game_over"
+            ss.game_active = False
+        else:
+            ss.phase = "pre_shock"
+        st.rerun()
 
-            # Recalculate
-            Y_eq, P_eq, og, inf, un = compute_equilibrium(ss.Y_n, ss.ad_shift, ss.sras_shift)
-            round_score = compute_score(og, inf)
-            ss.score += round_score
+# ========== MAIN CONTENT ==========
 
-            policy_desc = []
-            if fiscal != 0: policy_desc.append(f"Výdaje {fiscal:+.1f}%")
-            if tax_change != 0: policy_desc.append(f"Daně {tax_change:+.1f}%")
-            if rate_change != 0: policy_desc.append(f"Úrok {rate_change:+.2f} p.b.")
-            if not policy_desc: policy_desc = ["Bez zásahu"]
-
-            ss.history.append({
-                "round": ss.round, "Y": round(Y_eq, 1), "P": round(P_eq, 1),
-                "inflation": round(inf, 1), "unemployment": round(un, 1),
-                "output_gap": round(og, 1), "score": round_score,
-                "shock": ss.shock["name"], "policy": ", ".join(policy_desc)
-            })
-            ss.shock_applied = True
-            ss.shock = None
-
-            if ss.round >= n_rounds:
-                ss.game_active = False
-            st.rerun()
-
-    # ========== MAIN DISPLAY ==========
-    # Metrics
-    mc = st.columns(6)
-    mc[0].metric("Kolo", f"{ss.round}/{n_rounds}")
-    mc[1].metric("HDP (Y)", f"{Y_eq:.1f}", delta=f"{og:+.1f}% gap", delta_color="inverse" if og < -1 else ("inverse" if og > 3 else "normal"))
-    mc[2].metric("Cenová hladina", f"{P_eq:.1f}")
-    mc[3].metric("Inflace", f"{inf:.1f}%", delta=f"{inf-2:+.1f} od cíle", delta_color="inverse" if abs(inf-2) > 1 else "normal")
-    mc[4].metric("Nezaměstnanost", f"{un:.1f}%", delta=f"{un-5:+.1f} od přirozené", delta_color="inverse" if un > 6 else "normal")
-    mc[5].metric("Celkové skóre", f"{ss.score}", delta=f"ø {ss.score/max(1,len(ss.history)-1):.0f}/kolo" if len(ss.history) > 1 else "")
-
+# ---------- INTRO SCREEN ----------
+if ss.phase == "idle":
+    st.info("👈 Nastavte obtížnost a počet kol v postranním panelu a klikněte **Začít novou hru**.")
     st.markdown("---")
-
-    # Current shock banner
-    if ss.shock and not ss.shock_applied:
-        col_shock, col_hint = st.columns([2, 1])
-        with col_shock:
-            st.error(f"### {ss.shock['icon']} ŠOK: {ss.shock['name']}")
-            st.markdown(f"**{ss.shock['desc']}**")
-            effect_parts = []
-            if ss.shock["ad"] != 0:
-                direction = "doprava ↗" if ss.shock["ad"] > 0 else "doleva ↙"
-                effect_parts.append(f"AD se posouvá **{direction}** ({ss.shock['ad']:+.1f})")
-            if ss.shock["sras"] != 0:
-                direction = "nahoru ↑" if ss.shock["sras"] > 0 else "dolů ↓"
-                effect_parts.append(f"SRAS se posouvá **{direction}** ({ss.shock['sras']:+.1f})")
-            st.markdown(" | ".join(effect_parts))
-        with col_hint:
-            st.info("💡 **Nápověda:** Použijte šoupátka v postranním panelu k nastavení vaší fiskální a monetární reakce. Pak potvrďte rozhodnutí.")
-            if ss.shock["type"] == "demand":
-                st.caption("Tip: Poptávkový šok → reagujte protisměrnou poptávkovou politikou")
-            elif ss.shock["type"] == "supply":
-                st.caption("Tip: Nabídkový šok → dilema: stabilizovat ceny NEBO výstup?")
-            else:
-                st.caption("Tip: Kombinovaný šok → zvažte oba nástroje")
-
-    # AD-AS Graph
-    prev_ad = ss.prev_ad if hasattr(ss, "prev_ad") else None
-    prev_sras = ss.prev_sras if hasattr(ss, "prev_sras") else None
-
-    col_graph, col_info = st.columns([3, 1])
-    with col_graph:
-        st.subheader("AD-AS Diagram")
-        fig = plot_adas(ss.Y_n, ss.ad_shift, ss.sras_shift, Y_eq, P_eq, prev_ad, prev_sras)
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col_info:
-        st.subheader("📊 Stav ekonomiky")
-        if og < -3:
-            st.error(f"🔴 Hluboká recese (mezera {og:.1f}%)")
-        elif og < -1:
-            st.warning(f"🟡 Mírná recese (mezera {og:.1f}%)")
-        elif og > 3:
-            st.error(f"🔴 Přehřátí ekonomiky (+{og:.1f}%)")
-        elif og > 1:
-            st.warning(f"🟡 Mírné přehřátí (+{og:.1f}%)")
-        else:
-            st.success(f"🟢 Blízko potenciálu ({og:+.1f}%)")
-
-        if inf > 5:
-            st.error(f"🔴 Vysoká inflace ({inf:.1f}%)")
-        elif inf > 3:
-            st.warning(f"🟡 Zvýšená inflace ({inf:.1f}%)")
-        elif inf < 0:
-            st.error(f"🔴 Deflace ({inf:.1f}%)")
-        elif inf < 1:
-            st.warning(f"🟡 Nízká inflace ({inf:.1f}%)")
-        else:
-            st.success(f"🟢 Inflace v cíli ({inf:.1f}%)")
-
-        if un > 8:
-            st.error(f"🔴 Vysoká nezaměstnanost ({un:.1f}%)")
-        elif un > 6:
-            st.warning(f"🟡 Zvýšená nezaměstnanost ({un:.1f}%)")
-        else:
-            st.success(f"🟢 Nezaměstnanost OK ({un:.1f}%)")
-
-        st.markdown("---")
-        st.markdown("**Posun křivek:**")
-        st.markdown(f"- AD shift: **{ss.ad_shift:+.1f}**")
-        st.markdown(f"- SRAS shift: **{ss.sras_shift:+.1f}**")
-
-    # History
-    if len(ss.history) > 1:
-        st.markdown("---")
-        col_hist_chart, col_hist_table = st.columns([2, 1])
-        with col_hist_chart:
-            st.subheader("📈 Vývoj ekonomiky")
-            fig_h = plot_history(ss.history)
-            if fig_h:
-                st.plotly_chart(fig_h, use_container_width=True)
-        with col_hist_table:
-            st.subheader("📋 Přehled kol")
-            for h in reversed(ss.history):
-                if h["round"] == 0:
-                    continue
-                emoji = "🟢" if h["score"] >= 70 else ("🟡" if h["score"] >= 40 else "🔴")
-                st.markdown(f"**Kolo {h['round']}** {emoji} Skóre: {h['score']}/100")
-                st.caption(f"Šok: {h['shock']} | Reakce: {h['policy']}")
-                st.caption(f"Y={h['Y']}, P={h['P']}, π={h['inflation']}%, u={h['unemployment']}%")
-                st.markdown("---")
-
-    # GAME OVER
-    if not ss.game_active and ss.round > 0:
-        st.markdown("---")
-        st.balloons()
-        avg_score = ss.score / max(1, ss.round)
-        st.success(f"## 🏁 Hra skončila! Celkové skóre: {ss.score} bodů (průměr {avg_score:.0f}/kolo)")
-
-        if avg_score >= 80:
-            st.markdown("### 🏆 Vynikající! Jste skvělý centrální bankéř i ministr financí.")
-        elif avg_score >= 60:
-            st.markdown("### 🥈 Dobrá práce! Ekonomika přežila v rozumném stavu.")
-        elif avg_score >= 40:
-            st.markdown("### 🥉 Uspokojivé. Ekonomika zažila turbulence, ale přežila.")
-        else:
-            st.markdown("### 😰 Ekonomika je v krizi. Zkuste to znovu s jinou strategií!")
-
-        if st.button("🔄 Nová hra"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-
-# Fallback: show intro if no game
-if not st.session_state.game_active and st.session_state.round == 0:
-    st.markdown("---")
-    col_intro1, col_intro2 = st.columns(2)
-    with col_intro1:
+    c1, c2 = st.columns(2)
+    with c1:
         st.subheader("🎯 Jak hra funguje")
         st.markdown("""
-        1. **Každé kolo** přijde náhodný ekonomický šok (ropná krize, pandemie, investiční boom…)
-        2. **Šok posune** křivky AD a/nebo SRAS v diagramu
-        3. **Vy reagujete** fiskální politikou (výdaje, daně) a monetární politikou (úroková sazba)
-        4. **Cíl:** udržet HDP blízko potenciálního produktu (Y = 100) a inflaci kolem 2%
-        5. **Skóre** reflektuje, jak dobře jste ekonomiku stabilizovali
+        Hra simuluje roli **ekonomického poradce vlády**. Každé kolo:
+
+        1. 📢 **Přijde šok** – náhodná ekonomická událost posune křivky AD nebo SRAS
+        2. 📊 **Vidíte dopad** – v diagramu se zobrazí nová rovnováha po šoku
+        3. 🎛️ **Reagujete** – nastavíte fiskální politiku (výdaje, daně) a monetární politiku (úrokové sazby)
+        4. ✅ **Vyhodnocení** – model spočítá výsledek vaší reakce, dostanete skóre 0–100
+
+        **Cíl:** udržet ekonomiku co nejblíže potenciálnímu produktu (Y = 100) a inflaci kolem 2 %.
         """)
-    with col_intro2:
+    with c2:
         st.subheader("📚 Co se naučíte")
         st.markdown("""
-        - Jak funguje **model AD-AS** a co posouvá křivky
-        - Rozdíl mezi **poptávkovými a nabídkovými šoky**
-        - Jak reagovat **fiskální politikou** (vládní výdaje, daně)
-        - Jak reagovat **monetární politikou** (úrokové sazby)
-        - Proč je **stagflace** (nabídkový šok) těžší řešit než recese z poklesu poptávky
-        - **Trade-off** mezi stabilizací výstupu a cenové hladiny
+        - Jak **poptávkové šoky** (finanční krize, investiční boom) posouvají křivku AD
+        - Jak **nabídkové šoky** (ropná krize, technologie) posouvají SRAS
+        - Proč je **stagflace** obtížná – nabídkový šok vytváří dilema mezi inflací a recesí
+        - Jak funguje **fiskální politika** (vládní výdaje a daně)
+        - Jak funguje **monetární politika** (úrokové sazby centrální banky)
+        - Proč **kombinované šoky** (pandemie) vyžadují sofistikovanou reakci
         """)
 
-    # Demo graph
-    st.subheader("Ukázkový AD-AS diagram (výchozí rovnováha)")
-    Y_eq, P_eq, _, _, _ = compute_equilibrium(100, 0, 0)
-    fig_demo = plot_adas(100, 0, 0, Y_eq, P_eq)
-    st.plotly_chart(fig_demo, use_container_width=True)
+    st.subheader("Ukázkový AD-AS diagram – výchozí rovnováha")
+    Y0, P0, _, _, _ = compute_eq(100, 0, 0)
+    st.plotly_chart(plot_adas(100, 0, 0, Y0, P0, title="Výchozí stav: Y = Yₙ = 100, π = 2 %"), use_container_width=True)
+    st.caption("""
+    **Jak číst diagram:** Svislá osa = cenová hladina (P), vodorovná = reálný HDP (Y).  
+    **AD** (modrá) = agregátní poptávka – klesající, protože vyšší ceny snižují reálnou kupní sílu.  
+    **SRAS** (červená) = krátkodobá agregátní nabídka – rostoucí, protože vyšší ceny motivují firmy více vyrábět.  
+    **LRAS** (zelená čárkovaná) = dlouhodobá nabídka – potenciální produkt ekonomiky.  
+    **Žlutý diamant** = průsečík AD a SRAS = krátkodobá rovnováha.
+    """)
+
+# ---------- ACTIVE GAME ----------
+if ss.phase in ("shock_shown", "pre_shock"):
+    sh = ss.shock
+    Y_eq, P_eq, og, inf, un = compute_eq(ss.Y_n, ss.ad_shift, ss.sras_shift)
+
+    # ---- TOP METRICS ----
+    mc = st.columns(6)
+    mc[0].metric("Kolo", f"{ss.round} / {ss.n_rounds}")
+    mc[1].metric("HDP (Y)", f"{Y_eq:.1f}", delta=f"{og:+.1f} % gap")
+    mc[2].metric("Cenová hladina", f"{P_eq:.1f}")
+    mc[3].metric("Inflace", f"{inf:.1f} %", delta=f"{inf - 2:+.1f} od cíle")
+    mc[4].metric("Nezaměstnanost", f"{un:.1f} %")
+    mc[5].metric("Skóre", f"{ss.score}", delta=f"ø {ss.score / max(1, len(ss.history) - 1):.0f}/kolo" if len(ss.history) > 1 else "")
+
+    st.markdown("---")
+
+    # ---- STEP 1: SHOCK ANNOUNCEMENT ----
+    st.markdown("## 📢 Krok 1 – Co se stalo")
+    col_ev, col_mech = st.columns([3, 2])
+    with col_ev:
+        st.error(f"### {sh['icon']} {sh['name']}")
+        st.markdown(f"**{sh['desc']}**")
+    with col_mech:
+        st.warning("#### ⚙️ Ekonomický mechanismus")
+        st.markdown(sh["explain"])
+
+    # ---- STEP 2: IMPACT ON CURVES ----
+    st.markdown("## 📊 Krok 2 – Dopad na ekonomiku")
+    st.markdown("Níže vidíte, jak se šok projevil v AD-AS diagramu. **Průsvitné čárkované křivky** = stav před šokem. **Plné křivky** = stav po šoku.")
+
+    col_graph, col_status = st.columns([3, 1])
+    with col_graph:
+        fig = plot_adas(ss.Y_n, ss.ad_shift, ss.sras_shift, Y_eq, P_eq, ss.prev_ad, ss.prev_sras,
+                        title=f"Kolo {ss.round}: Po šoku „{sh['name']}" – PŘED vaší reakcí")
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col_status:
+        st.markdown("### Posuny křivek")
+        if sh["ad"] > 0:
+            st.markdown(f"➡️ AD doprava: **+{sh['ad']:.1f}**")
+            st.caption("Poptávka roste → HDP roste, ceny rostou")
+        elif sh["ad"] < 0:
+            st.markdown(f"⬅️ AD doleva: **{sh['ad']:.1f}**")
+            st.caption("Poptávka klesá → HDP klesá, ceny klesají")
+        else:
+            st.markdown("↔️ AD beze změny")
+
+        if sh["sras"] > 0:
+            st.markdown(f"⬆️ SRAS nahoru: **+{sh['sras']:.1f}**")
+            st.caption("Náklady rostou → firmy vyrábějí méně za vyšší ceny")
+        elif sh["sras"] < 0:
+            st.markdown(f"⬇️ SRAS dolů: **{sh['sras']:.1f}**")
+            st.caption("Náklady klesají → firmy vyrábějí více za nižší ceny")
+        else:
+            st.markdown("↔️ SRAS beze změny")
+
+        st.markdown("---")
+        st.markdown("### Stav ekonomiky")
+        if og < -3:
+            st.error(f"🔴 Hluboká recese ({og:+.1f} %)")
+        elif og < -1:
+            st.warning(f"🟡 Mírná recese ({og:+.1f} %)")
+        elif og > 3:
+            st.error(f"🔴 Přehřátí ({og:+.1f} %)")
+        elif og > 1:
+            st.warning(f"🟡 Mírné přehřátí ({og:+.1f} %)")
+        else:
+            st.success(f"🟢 Blízko potenciálu ({og:+.1f} %)")
+
+        if inf > 5:
+            st.error(f"🔴 Vysoká inflace ({inf:.1f} %)")
+        elif inf > 3:
+            st.warning(f"🟡 Zvýšená inflace ({inf:.1f} %)")
+        elif inf < 0:
+            st.error(f"🔴 Deflace ({inf:.1f} %)")
+        elif inf < 1:
+            st.warning(f"🟡 Nízká inflace ({inf:.1f} %)")
+        else:
+            st.success(f"🟢 Inflace v cíli ({inf:.1f} %)")
+
+    # ---- STEP 3: POLICY HINT ----
+    st.markdown("## 🎛️ Krok 3 – Vaše reakce")
+    st.markdown("Nastavte svou fiskální a monetární politiku **v postranním panelu vlevo** a klikněte **Potvrdit rozhodnutí**.")
+
+    with st.expander("💡 Nápověda: Jak reagovat na tento typ šoku?", expanded=False):
+        if sh["type"] == "demand":
+            st.markdown("""
+            **Poptávkový šok** – relativně přímočaré řešení:
+            - Pokud AD klesla (recese): zvyšte výdaje, snižte daně, snižte úrokovou sazbu → posunete AD zpět doprava
+            - Pokud AD vzrostla (přehřátí): škrtěte výdaje, zvyšte daně, zvyšte sazbu → AD zpět doleva
+            - U čistě poptávkového šoku můžete stabilizovat **zároveň** výstup i ceny
+            """)
+        elif sh["type"] == "supply":
+            st.markdown("""
+            **Nabídkový šok** – dilema!
+            - SRAS se posunula → výstup a ceny se pohybují **protisměrně**
+            - Pokud stimulujete poptávku (AD doprava), zvýšíte výstup, ale zároveň ještě víc roste inflace
+            - Pokud tlumíte inflaci (AD doleva), prohloubíte recesi
+            - Musíte zvolit **kompromis** – co je priorita: ceny, nebo zaměstnanost?
+            """)
+        else:
+            st.markdown("""
+            **Kombinovaný šok** – nejtěžší situace:
+            - AD i SRAS se posunuly současně
+            - Zvažte, který efekt je silnější, a reagujte primárně na něj
+            - Často není možné dosáhnout dokonalé stabilizace – minimalizujte celkovou škodu
+            """)
+
+    # ---- HISTORY ----
+    if len(ss.history) > 1:
+        st.markdown("---")
+        st.subheader("📈 Dosavadní vývoj")
+        fig_h = plot_history(ss.history)
+        if fig_h:
+            st.plotly_chart(fig_h, use_container_width=True)
+        with st.expander("📋 Tabulka předchozích kol"):
+            for h in reversed(ss.history):
+                if h["round"] == 0: continue
+                emoji = "🟢" if h["score"] >= 70 else ("🟡" if h["score"] >= 40 else "🔴")
+                st.markdown(f"**Kolo {h['round']}** {emoji} Skóre: {h['score']}/100 | Šok: {h['shock']} | Reakce: {h['policy']} | Y={h['Y']}, π={h['inflation']} %, u={h['unemployment']} %")
+
+# ---------- GAME OVER ----------
+if ss.phase == "game_over":
+    st.balloons()
+    avg = ss.score / max(1, ss.round)
+
+    st.success(f"## 🏁 Hra skončila! Celkové skóre: **{ss.score} bodů** (průměr **{avg:.0f}**/kolo)")
+    if avg >= 80:
+        st.markdown("### 🏆 Vynikající! Jste skvělý ekonomický stratég.")
+    elif avg >= 60:
+        st.markdown("### 🥈 Dobrá práce! Ekonomika přežila v rozumném stavu.")
+    elif avg >= 40:
+        st.markdown("### 🥉 Uspokojivé. Ekonomika zažila turbulence.")
+    else:
+        st.markdown("### 😰 Ekonomika je v krizi. Zkuste jinou strategii!")
+
+    st.markdown("---")
+    st.subheader("📈 Celkový vývoj")
+    fig_h = plot_history(ss.history)
+    if fig_h:
+        st.plotly_chart(fig_h, use_container_width=True)
+
+    st.subheader("📋 Přehled všech kol")
+    import pandas as pd
+    df = pd.DataFrame(ss.history[1:])
+    df.columns = ["Kolo", "HDP", "Cen. hladina", "Inflace %", "Nezam. %", "Output gap %", "Skóre", "Šok", "Reakce"]
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    if st.button("🔄 Nová hra", use_container_width=True):
+        for k, v in DEFAULTS.items():
+            ss[k] = v
+        st.rerun()
 
 st.markdown("---")
-st.caption("⚠️ Zjednodušený lineární AD-AS model pro výukové účely. Reálná ekonomika je složitější.")
+st.caption("⚠️ Zjednodušený lineární AD-AS model pro výukové účely. Reálná ekonomika je podstatně složitější.")
