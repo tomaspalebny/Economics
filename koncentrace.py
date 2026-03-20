@@ -14,7 +14,6 @@ st.sidebar.header("⚙️ Firmy na trhu")
 if "firms" not in st.session_state:
     st.session_state.firms = {"Firma A": 40.0, "Firma B": 20.0, "Firma C": 15.0, "Firma D": 10.0, "Firma E": 8.0, "Ostatní": 7.0}
 
-# Add / remove firms
 with st.sidebar.expander("➕ Přidat / ➖ Odebrat firmu"):
     new_name = st.text_input("Název nové firmy", key="new_name")
     new_share = st.number_input("Podíl (%)", 0.0, 100.0, 5.0, key="new_share")
@@ -26,7 +25,6 @@ with st.sidebar.expander("➕ Přidat / ➖ Odebrat firmu"):
         del st.session_state.firms[rm]
         st.rerun()
 
-# Merger
 with st.sidebar.expander("🤝 Fúze dvou firem"):
     names = list(st.session_state.firms.keys())
     if len(names) >= 2:
@@ -38,7 +36,6 @@ with st.sidebar.expander("🤝 Fúze dvou firem"):
             st.session_state.firms[merged_name] = new_share
             st.rerun()
 
-# Presets
 with st.sidebar.expander("📦 Ukázkové scénáře"):
     presets = {
         "AquaPlus (minerální voda)": {"AquaPlus": 44, "FreshSpring": 19, "CrystalWater": 14, "NaturaDrink": 9, "PureDrop": 7, "Ostatní": 7},
@@ -56,73 +53,93 @@ with st.sidebar.expander("📦 Ukázkové scénáře"):
 st.sidebar.divider()
 st.sidebar.subheader("Tržní podíly (%)")
 
-# Sliders for each firm
-updated = {}
-for name, share in st.session_state.firms.items():
-    updated[name] = st.sidebar.slider(name, 0.0, 100.0, float(share), 0.5, key=f"sl_{name}")
-st.session_state.firms = updated
+firm_names = list(st.session_state.firms.keys())
+balance_firm = firm_names[0]
+st.sidebar.caption(f"⚖️ **{balance_firm}** se automaticky dorovnává na 100 %")
 
+updated = {}
+for name in firm_names:
+    if name == balance_firm:
+        continue
+    updated[name] = st.sidebar.slider(name, 0.0, 100.0, float(st.session_state.firms[name]), 0.5, key=f"sl_{name}")
+
+others_sum = sum(updated.values())
+balance_share = round(100.0 - others_sum, 1)
+
+valid = True
+if balance_share < 0:
+    st.sidebar.error(f"⚠️ Součet ostatních = {others_sum:.1f} % > 100 %. Snižte podíly!")
+    valid = False
+    balance_share = 0.0
+
+st.sidebar.metric(f"{balance_firm} (dopočet)", f"{balance_share:.1f} %")
+
+updated[balance_firm] = balance_share
+updated = {name: updated[name] for name in firm_names}
+st.session_state.firms = updated
 total = sum(updated.values())
 
-# --- Calculations ---
 shares_pct = np.array(sorted(updated.values(), reverse=True))
-shares_frac = shares_pct / 100.0
-
 n = len(shares_pct)
 cr4 = float(shares_pct[:4].sum()) if n >= 4 else float(shares_pct.sum())
 hhi = float((shares_pct**2).sum())
-
-# Gap test
 s1 = shares_pct[0] if n > 0 else 0
 s2 = shares_pct[1] if n > 1 else 0
 gap = s1 - s2
 ratio = s1 / s2 if s2 > 0 else float('inf')
 
-# --- Layout ---
+if not valid or abs(total - 100.0) > 0.5:
+    st.error(f"⚠️ Součet podílů = {total:.1f} % ≠ 100 %. Upravte podíly v postranním panelu!")
+    st.stop()
+
+signal = "Testovat dominanci" if s1 >= 40 and ratio >= 2 else ("Nejasné – nutná analýza" if s1 >= 40 or ratio >= 1.5 else "Nepravděpodobná dominance")
+
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Součet podílů", f"{total:.1f} %", delta="OK ✓" if abs(total - 100) < 0.5 else f"Δ {total-100:+.1f} pp ⚠️")
+col1.metric("Součet podílů", f"{total:.1f} %", delta="OK ✓")
 col2.metric("CR4", f"{cr4:.1f} %")
 col3.metric("HHI", f"{hhi:.0f}")
-signal = "Testovat dominanci" if s1 >= 40 and ratio >= 2 else ("Nejasné – nutná analýza" if s1 >= 40 or ratio >= 1.5 else "Nepravděpodobná dominance")
 col4.metric("Gap test signál", signal)
 
 c1, c2 = st.columns([1, 1])
 
-# --- CR4/HHI scatter (like the image) ---
 with c1:
     st.subheader("Mapa koncentrace (CR4 × HHI)")
     fig = go.Figure()
-    # Zones
+    # Colored zones
     fig.add_hrect(y0=0, y1=1500, fillcolor="green", opacity=0.07, line_width=0)
     fig.add_hrect(y0=1500, y1=2500, fillcolor="orange", opacity=0.07, line_width=0)
     fig.add_hrect(y0=2500, y1=10000, fillcolor="red", opacity=0.07, line_width=0)
+    # Fixed grid lines
     fig.add_vline(x=60, line_dash="dash", line_color="steelblue", opacity=0.5)
     fig.add_hline(y=1500, line_dash="dash", line_color="steelblue", opacity=0.5)
     fig.add_hline(y=2500, line_dash="dash", line_color="steelblue", opacity=0.5)
     # Zone labels
-    for label, x, y in [("Competitive", 30, 700), ("Moderate", 50, 1800), ("Oligopoly", 75, 2600), ("Very high concentration", 85, 3500)]:
+    for label, x, y in [("Competitive", 30, 700), ("Moderate", 50, 1800), ("Oligopoly", 75, 2600), ("Very high\nconcentration", 85, 3500)]:
         fig.add_annotation(x=x, y=y, text=label, showarrow=False, font=dict(size=11, color="gray"))
-    # Current point
-    fig.add_trace(go.Scatter(x=[cr4], y=[hhi], mode="markers+text", text=["Aktuální trh"],
+    # Current market point
+    fig.add_trace(go.Scatter(x=[cr4], y=[hhi], mode="markers+text",
+                             text=[f"CR4={cr4:.0f}%, HHI={hhi:.0f}"],
                              textposition="top center", marker=dict(size=14, color="blue"),
                              name="Aktuální stav"))
-    fig.update_layout(xaxis=dict(title="CR4 (%)", range=[0, 105]),
-                      yaxis=dict(title="HHI", range=[0, max(4000, hhi*1.2)]),
-                      height=480, margin=dict(l=40, r=20, t=30, b=40), showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+    fig.update_layout(
+        xaxis=dict(title="CR4 (%)", range=[0, 105], fixedrange=True, dtick=20),
+        yaxis=dict(title="HHI", range=[0, 10200], fixedrange=True, dtick=1000),
+        height=500, margin=dict(l=40, r=20, t=30, b=40), showlegend=False,
+        dragmode=False,
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
 
 with c2:
     st.subheader("Podíly firem")
     df = pd.DataFrame({"Firma": list(updated.keys()), "Podíl (%)": list(updated.values())})
     df = df.sort_values("Podíl (%)", ascending=False).reset_index(drop=True)
-
     fig2 = go.Figure(go.Bar(x=df["Firma"], y=df["Podíl (%)"], marker_color="steelblue",
                             text=df["Podíl (%)"].apply(lambda v: f"{v:.1f}%"), textposition="outside"))
-    fig2.update_layout(yaxis=dict(title="Tržní podíl (%)", range=[0, max(df["Podíl (%)"].max()*1.3, 10)]),
-                       height=480, margin=dict(l=40, r=20, t=30, b=40))
-    st.plotly_chart(fig2, use_container_width=True)
+    fig2.update_layout(yaxis=dict(title="Tržní podíl (%)", range=[0, 105], fixedrange=True),
+                       xaxis=dict(fixedrange=True),
+                       height=500, margin=dict(l=40, r=20, t=30, b=40), dragmode=False)
+    st.plotly_chart(fig2, use_container_width=True, config={"staticPlot": True})
 
-# --- Detail table ---
 with st.expander("📋 Detailní výpočty"):
     detail = pd.DataFrame({
         "Firma": list(updated.keys()),
@@ -131,7 +148,6 @@ with st.expander("📋 Detailní výpočty"):
     }).sort_values("Podíl (%)", ascending=False)
     detail["Kumulativní podíl (%)"] = detail["Podíl (%)"].cumsum()
     st.dataframe(detail, use_container_width=True, hide_index=True)
-
     st.markdown(f"""
 | Ukazatel | Hodnota | Interpretace |
 |---|---|---|
@@ -144,7 +160,6 @@ with st.expander("📋 Detailní výpočty"):
 | **Signál** | {signal} | Gap test heuristika |
 """)
 
-# --- Theory ---
 with st.expander("📚 Teorie – CR4, HHI, Gap test"):
     st.markdown(r"""
 ### CR4 (Concentration Ratio top 4)
