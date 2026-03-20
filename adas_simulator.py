@@ -5,7 +5,7 @@ import random
 
 st.set_page_config(page_title="AD-AS Simulátor s náhodnými šoky", layout="wide")
 st.title("📈 AD-AS Model: Simulátor s náhodnými šoky")
-st.markdown("*Interaktivní hra pro výuku makroekonomie – reagujte na ekonomické šoky fiskální a monetární politikou*")
+st.markdown("*Interaktivní hra pro výuku makroekonomie - reagujte na ekonomické šoky fiskální a monetární politikou*")
 
 # ========== SESSION STATE INIT ==========
 DEFAULTS = dict(
@@ -29,13 +29,13 @@ SHOCKS = [
      "explain": "Lockdowny **snižují poptávku** (AD doleva) a zároveň **narušují výrobu** (SRAS nahoru). Kombinovaný šok je nejtěžší na řešení."},
     {"name": "Technologický boom", "desc": "Průlomová technologie (AI) zvyšuje produktivitu firem o 20 %.", "type": "supply", "sras": -10, "ad": +5, "icon": "🚀",
      "explain": "Vyšší produktivita **snižuje jednotkové náklady** → SRAS se posouvá dolů (doprava). Optimismus firem mírně zvyšuje investice (AD doprava)."},
-    {"name": "Spotřebitelský optimismus", "desc": "Důvěra spotřebitelů na historickém maximu – domácnosti utrácejí a berou si úvěry.", "type": "demand", "sras": 0, "ad": +12, "icon": "💰",
-     "explain": "Rostoucí spotřeba a investice **zvyšují agregátní poptávku** → AD se posouvá doprava. SRAS se nemění – náklady firem zůstávají stejné."},
+    {"name": "Spotřebitelský optimismus", "desc": "Důvěra spotřebitelů na historickém maximu - domácnosti utrácejí a berou si úvěry.", "type": "demand", "sras": 0, "ad": +12, "icon": "💰",
+     "explain": "Rostoucí spotřeba a investice **zvyšují agregátní poptávku** → AD se posouvá doprava. SRAS se nemění - náklady firem zůstávají stejné."},
     {"name": "Finanční krize", "desc": "Krach na burze, banky omezují úvěry. Firmy i domácnosti odkládají investice a nákupy.", "type": "demand", "sras": +3, "ad": -18, "icon": "📉",
      "explain": "Pokles investic a spotřeby **prudce snižuje AD** (doleva). Zpřísnění úvěrů mírně zvyšuje náklady financování firem (SRAS mírně nahoru)."},
     {"name": "Neúroda a potravinová krize", "desc": "Extrémní sucho zdražuje potraviny a zvyšuje výrobní náklady v potravinářství.", "type": "supply", "sras": +9, "ad": -2, "icon": "🌾",
      "explain": "Dražší vstupy **zvyšují náklady výrobců** → SRAS nahoru. Dražší potraviny mírně snižují reálné příjmy domácností (AD mírně doleva)."},
-    {"name": "Investiční boom", "desc": "Masivní příliv zahraničních investic – otevírají se nové továrny a centra.", "type": "demand", "sras": -2, "ad": +14, "icon": "🏗️",
+    {"name": "Investiční boom", "desc": "Masivní příliv zahraničních investic - otevírají se nové továrny a centra.", "type": "demand", "sras": -2, "ad": +14, "icon": "🏗️",
      "explain": "Investice **zvyšují poptávku** (AD doprava) a zároveň mírně rozšiřují výrobní kapacity (SRAS mírně dolů)."},
     {"name": "Geopolitická krize", "desc": "Válečný konflikt v blízkém regionu narušuje dodavatelské řetězce a zvyšuje nejistotu.", "type": "both", "sras": +10, "ad": -8, "icon": "⚔️",
      "explain": "Narušení dodávek **zvyšuje náklady** (SRAS nahoru). Nejistota **snižuje spotřebu a investice** (AD doleva). Klasický stagflační scénář."},
@@ -135,7 +135,7 @@ if not ss.game_active and ss.phase == "idle":
         ss.phase = "pre_shock"
         ss.round = 0
         Y0, P0, og0, inf0, un0 = compute_eq(100, 0, 0)
-        ss.history = [dict(round=0, Y=Y0, P=P0, inflation=inf0, unemployment=un0, output_gap=og0, score=100, shock="—", policy="—")]
+        ss.history = [dict(round=0, Y=Y0, P=P0, inflation=inf0, unemployment=un0, output_gap=og0, score=100, shock="-", policy="-")]
         st.rerun()
 
 # --- PHASE: PRE_SHOCK → generate shock ---
@@ -210,10 +210,10 @@ if ss.phase == "idle":
         st.markdown("""
         Hra simuluje roli **ekonomického poradce vlády**. Každé kolo:
 
-        1. 📢 **Přijde šok** – náhodná ekonomická událost posune křivky AD nebo SRAS
-        2. 📊 **Vidíte dopad** – v diagramu se zobrazí nová rovnováha po šoku
-        3. 🎛️ **Reagujete** – nastavíte fiskální politiku (výdaje, daně) a monetární politiku (úrokové sazby)
-        4. ✅ **Vyhodnocení** – model spočítá výsledek vaší reakce, dostanete skóre 0–100
+        1. 📢 **Přijde šok** - náhodná ekonomická událost posune křivky AD nebo SRAS
+        2. 📊 **Vidíte dopad** - v diagramu se zobrazí nová rovnováha po šoku
+        3. 🎛️ **Reagujete** - nastavíte fiskální politiku (výdaje, daně) a monetární politiku (úrokové sazby)
+        4. ✅ **Vyhodnocení** - model spočítá výsledek vaší reakce, dostanete skóre 0-100
 
         **Cíl:** udržet ekonomiku co nejblíže potenciálnímu produktu (Y = 100) a inflaci kolem 2 %.
         """)
@@ -222,20 +222,20 @@ if ss.phase == "idle":
         st.markdown("""
         - Jak **poptávkové šoky** (finanční krize, investiční boom) posouvají křivku AD
         - Jak **nabídkové šoky** (ropná krize, technologie) posouvají SRAS
-        - Proč je **stagflace** obtížná – nabídkový šok vytváří dilema mezi inflací a recesí
+        - Proč je **stagflace** obtížná - nabídkový šok vytváří dilema mezi inflací a recesí
         - Jak funguje **fiskální politika** (vládní výdaje a daně)
         - Jak funguje **monetární politika** (úrokové sazby centrální banky)
         - Proč **kombinované šoky** (pandemie) vyžadují sofistikovanou reakci
         """)
 
-    st.subheader("Ukázkový AD-AS diagram – výchozí rovnováha")
+    st.subheader("Ukázkový AD-AS diagram - výchozí rovnováha")
     Y0, P0, _, _, _ = compute_eq(100, 0, 0)
     st.plotly_chart(plot_adas(100, 0, 0, Y0, P0, title="Výchozí stav: Y = Yₙ = 100, π = 2 %"), use_container_width=True)
     st.caption("""
     **Jak číst diagram:** Svislá osa = cenová hladina (P), vodorovná = reálný HDP (Y).  
-    **AD** (modrá) = agregátní poptávka – klesající, protože vyšší ceny snižují reálnou kupní sílu.  
-    **SRAS** (červená) = krátkodobá agregátní nabídka – rostoucí, protože vyšší ceny motivují firmy více vyrábět.  
-    **LRAS** (zelená čárkovaná) = dlouhodobá nabídka – potenciální produkt ekonomiky.  
+    **AD** (modrá) = agregátní poptávka - klesající, protože vyšší ceny snižují reálnou kupní sílu.  
+    **SRAS** (červená) = krátkodobá agregátní nabídka - rostoucí, protože vyšší ceny motivují firmy více vyrábět.  
+    **LRAS** (zelená čárkovaná) = dlouhodobá nabídka - potenciální produkt ekonomiky.  
     **Žlutý diamant** = průsečík AD a SRAS = krátkodobá rovnováha.
     """)
 
@@ -256,7 +256,7 @@ if ss.phase in ("shock_shown", "pre_shock"):
     st.markdown("---")
 
     # ---- STEP 1: SHOCK ANNOUNCEMENT ----
-    st.markdown("## 📢 Krok 1 – Co se stalo")
+    st.markdown("## 📢 Krok 1 - Co se stalo")
     col_ev, col_mech = st.columns([3, 2])
     with col_ev:
         st.error(f"### {sh['icon']} {sh['name']}")
@@ -266,13 +266,13 @@ if ss.phase in ("shock_shown", "pre_shock"):
         st.markdown(sh["explain"])
 
     # ---- STEP 2: IMPACT ON CURVES ----
-    st.markdown("## 📊 Krok 2 – Dopad na ekonomiku")
+    st.markdown("## 📊 Krok 2 - Dopad na ekonomiku")
     st.markdown("Níže vidíte, jak se šok projevil v AD-AS diagramu. **Průsvitné čárkované křivky** = stav před šokem. **Plné křivky** = stav po šoku.")
 
     col_graph, col_status = st.columns([3, 1])
     with col_graph:
         fig = plot_adas(ss.Y_n, ss.ad_shift, ss.sras_shift, Y_eq, P_eq, ss.prev_ad, ss.prev_sras,
-                        title=f"Kolo {ss.round}: Po šoku „{sh['name']}" – PŘED vaší reakcí")
+                        title=f"Kolo {ss.round}: Po šoku '{sh['name']}" - PŘED vaší reakcí")
         st.plotly_chart(fig, use_container_width=True)
 
     with col_status:
@@ -320,31 +320,31 @@ if ss.phase in ("shock_shown", "pre_shock"):
             st.success(f"🟢 Inflace v cíli ({inf:.1f} %)")
 
     # ---- STEP 3: POLICY HINT ----
-    st.markdown("## 🎛️ Krok 3 – Vaše reakce")
+    st.markdown("## 🎛️ Krok 3 - Vaše reakce")
     st.markdown("Nastavte svou fiskální a monetární politiku **v postranním panelu vlevo** a klikněte **Potvrdit rozhodnutí**.")
 
     with st.expander("💡 Nápověda: Jak reagovat na tento typ šoku?", expanded=False):
         if sh["type"] == "demand":
             st.markdown("""
-            **Poptávkový šok** – relativně přímočaré řešení:
+            **Poptávkový šok** - relativně přímočaré řešení:
             - Pokud AD klesla (recese): zvyšte výdaje, snižte daně, snižte úrokovou sazbu → posunete AD zpět doprava
             - Pokud AD vzrostla (přehřátí): škrtěte výdaje, zvyšte daně, zvyšte sazbu → AD zpět doleva
             - U čistě poptávkového šoku můžete stabilizovat **zároveň** výstup i ceny
             """)
         elif sh["type"] == "supply":
             st.markdown("""
-            **Nabídkový šok** – dilema!
+            **Nabídkový šok** - dilema!
             - SRAS se posunula → výstup a ceny se pohybují **protisměrně**
             - Pokud stimulujete poptávku (AD doprava), zvýšíte výstup, ale zároveň ještě víc roste inflace
             - Pokud tlumíte inflaci (AD doleva), prohloubíte recesi
-            - Musíte zvolit **kompromis** – co je priorita: ceny, nebo zaměstnanost?
+            - Musíte zvolit **kompromis** - co je priorita: ceny, nebo zaměstnanost?
             """)
         else:
             st.markdown("""
-            **Kombinovaný šok** – nejtěžší situace:
+            **Kombinovaný šok** - nejtěžší situace:
             - AD i SRAS se posunuly současně
             - Zvažte, který efekt je silnější, a reagujte primárně na něj
-            - Často není možné dosáhnout dokonalé stabilizace – minimalizujte celkovou škodu
+            - Často není možné dosáhnout dokonalé stabilizace - minimalizujte celkovou škodu
             """)
 
     # ---- HISTORY ----
