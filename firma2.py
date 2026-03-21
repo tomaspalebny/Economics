@@ -16,7 +16,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("📊 Firm Equilibrium Interactive Simulator")
-st.markdown(*Learn how firms optimize output and pricing across different market structures**")
+st.markdown("*Learn how firms optimize output and pricing across different market structures**")
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
