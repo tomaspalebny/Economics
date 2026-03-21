@@ -257,15 +257,17 @@ with tab_presets:
         format_func=lambda i: preset_names[i], key="preset_sel")
     preset = PRESETS[selected_idx]
 
-    # Detect preset change and reset slider values
+    # Detect preset change and reset slider values via on_change
     if "prev_preset_idx" not in st.session_state:
         st.session_state.prev_preset_idx = selected_idx
+        st.session_state.pr_E = float(preset["E"])
+        st.session_state.pr_pcz = float(preset["p_cz_mult"])
+        st.session_state.pr_peu = float(preset["p_eu_mult"])
     if st.session_state.prev_preset_idx != selected_idx:
         st.session_state.prev_preset_idx = selected_idx
         st.session_state.pr_E = float(preset["E"])
         st.session_state.pr_pcz = float(preset["p_cz_mult"])
         st.session_state.pr_peu = float(preset["p_eu_mult"])
-        # Also reset custom prices if enabled
         for i, it in enumerate(BASKET_DEFAULTS):
             if f"prc_{i}" in st.session_state:
                 st.session_state[f"prc_{i}"] = float(round(it[2] * preset["p_cz_mult"], 1))
@@ -309,15 +311,15 @@ with tab_presets:
 
     pc1, pc2, pc3 = st.columns(3)
     with pc1:
-        pr_E = st.slider("Nominalni kurz (CZK/EUR)", 15.0, 40.0, float(preset["E"]), 0.05, key="pr_E",
+        pr_E = st.slider("Nominalni kurz (CZK/EUR)", 15.0, 40.0, step=0.05, key="pr_E",
             help="Kolik CZK zaplatite za 1 EUR")
         if not pr_direct:
             st.caption(f"= {1/pr_E:.4f} EUR/CZK")
     with pc2:
-        pr_pcz = st.slider("Cenovy multiplikator CR", 0.80, 1.30, float(preset["p_cz_mult"]), 0.005, key="pr_pcz",
+        pr_pcz = st.slider("Cenovy multiplikator CR", 0.80, 1.30, step=0.005, key="pr_pcz",
             format="%.3f", help="1.0 = zakladni ceny, 1.10 = +10 % inflace")
     with pc3:
-        pr_peu = st.slider("Cenovy multiplikator EU", 0.80, 1.30, float(preset["p_eu_mult"]), 0.005, key="pr_peu",
+        pr_peu = st.slider("Cenovy multiplikator EU", 0.80, 1.30, step=0.005, key="pr_peu",
             format="%.3f", help="1.0 = zakladni ceny, 1.05 = +5 % inflace")
 
     # Weights
