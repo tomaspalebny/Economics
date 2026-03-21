@@ -56,7 +56,7 @@ PRESETS = [
         key="ecb_easing_2024",
         name="ECB snizila sazby 2024",
         icon="🇪🇺",
-        desc_event="ECB zahajila v cervnu 2024 cyklus snizovani sazeb. EUR oslabilo vuci rade men. CNB zustala na vyssich sazbách.",
+        desc_event="ECB zahajila v cervnu 2024 cyklus snizovani sazeb. EUR oslabilo vuci rade men. CNB zustala na vyssich sazbch.",
         desc_domestic="Ceska inflace se vratila k cili (~2,5 %), ceny rostly mirne.",
         desc_foreign="V eurozone inflace klesla pod 2,5 %, ceny se stabilizovaly.",
         desc_nominal="CZK mirne posilila (z ~25,3 na ~25,0 CZK/EUR), protoze urokovy diferencial favorizoval CZK.",
@@ -256,6 +256,22 @@ with tab_presets:
     selected_idx = st.selectbox("Vyberte scenar:", range(len(PRESETS)),
         format_func=lambda i: preset_names[i], key="preset_sel")
     preset = PRESETS[selected_idx]
+
+    # Detect preset change and reset slider values
+    if "prev_preset_idx" not in st.session_state:
+        st.session_state.prev_preset_idx = selected_idx
+    if st.session_state.prev_preset_idx != selected_idx:
+        st.session_state.prev_preset_idx = selected_idx
+        st.session_state.pr_E = float(preset["E"])
+        st.session_state.pr_pcz = float(preset["p_cz_mult"])
+        st.session_state.pr_peu = float(preset["p_eu_mult"])
+        # Also reset custom prices if enabled
+        for i, it in enumerate(BASKET_DEFAULTS):
+            if f"prc_{i}" in st.session_state:
+                st.session_state[f"prc_{i}"] = float(round(it[2] * preset["p_cz_mult"], 1))
+            if f"pre_{i}" in st.session_state:
+                st.session_state[f"pre_{i}"] = float(round(it[3] * preset["p_eu_mult"], 2))
+        st.rerun()
 
     st.markdown("---")
 
