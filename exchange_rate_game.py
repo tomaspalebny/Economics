@@ -234,11 +234,11 @@ def render_formulas(r, E, is_direct, container):
 def render_weight_pie(weights, container):
     names = [f"{it[1]} {it[0]}" for it in BASKET_DEFAULTS]
     fig = go.Figure(go.Pie(labels=names, values=weights, hole=0.35,
-        textinfo="label+percent", textposition="outside", textfont=dict(color="#FFFFFF", size=12),
+        textinfo="label+percent", textposition="outside", textfont=dict(color="#000000", size=12),
         marker=dict(colors=["#6366f1","#f59e0b","#ef4444","#22c55e","#8b5cf6",
                             "#ec4899","#14b8a6","#f97316","#06b6d4","#84cc16",
                             "#a855f7","#e11d48","#0ea5e9","#eab308"])))
-    fig.update_layout(height=380, paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#FFFFFF"),
+    fig.update_layout(height=380, paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#000000"),
         margin=dict(t=20, b=20, l=20, r=20), showlegend=False)
     container.plotly_chart(fig, use_container_width=True)
 
