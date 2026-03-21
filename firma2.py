@@ -16,7 +16,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("📊 Firm Equilibrium Interactive Simulator")
-st.markdown("**Learn how firms optimize output and pricing across different market structures**")
+st.markdown(*Learn how firms optimize output and pricing across different market structures**")
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
@@ -373,7 +373,7 @@ elif page == "Duopoly":
     
     ax.plot(q_a_range, best_response_b, label="Firm B's Reaction Function", linewidth=2.5, color='red')
     ax.plot(best_response_a, q_b_range, label="Firm A's Reaction Function", linewidth=2.5, color='blue')
-    ax.scatter([q_a], [q_b], s=200, color='green', zorder=5, label="Current Position", marker='*")
+    ax.scatter([q_a], [q_b], s=200, color='green', zorder=5, label="Current Position", marker='*'")
     
     ax.set_xlabel("Firm A Output (units)")
     ax.set_ylabel("Firm B Output (units)")
