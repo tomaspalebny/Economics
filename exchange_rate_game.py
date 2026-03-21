@@ -422,7 +422,7 @@ with tab_presets:
         xaxis=dict(title="Nominální kurz CZK/EUR", gridcolor="rgba(100,100,100,0.2)"),
         yaxis=dict(title="Reálný kurz Q", gridcolor="rgba(100,100,100,0.2)", range=[0.6, 1.4]),
         plot_bgcolor="rgba(15,23,42,0.5)", paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#e2e8f0"), legend=dict(orientation="h", y=1.1), margin=dict(t=40, b=40))
+        font=dict(color="#000000"), legend=dict(orientation="h", y=1.1), margin=dict(t=40, b=40))
     st.plotly_chart(fig_sens, use_container_width=True)
 
 # ================================================================
