@@ -114,7 +114,7 @@ PRESETS = [
         desc_foreign="Ceny v EU rostou stabilním tempem (~2 %).",
         desc_nominal="CZK dlouhodobě posiluje (z ~30 v 2004 na ~25 v 2024). Odráží růst produktivity.",
         desc_real="CZK reálně posiluje – kombinace nominálního posílení + vyšší české inflace. ČR konverguje cenově k EU.",
-        desc_ppp="PPP kurz roste (české ceny rostou rychleji), ale nominální kurz posiluje ještě rychleji → CZK se přibližuje „správné" hodnotě.",
+        desc_ppp="PPP kurz roste (české ceny rostou rychleji), ale nominální kurz posiluje ještě rychleji → CZK se přibližuje paritní hodnotě.",
         E=24.50, p_cz_mult=1.04, p_eu_mult=1.02,
     ),
     dict(
