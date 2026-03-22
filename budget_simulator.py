@@ -4,10 +4,10 @@ st.markdown(
     """
     <style>
         html, body, [data-testid=\"stAppViewContainer\"] {
-            font-size: clamp(15px, 2vw, 18px) !important;
+            font-size: clamp(14px, 2vw, 17px) !important;
         }
         h1, .stMarkdown h1, .stTitle {
-            font-size: clamp(1.3em, 3vw, 1.4em) !important;
+            font-size: clamp(1.3em, 2vw, 1.4em) !important;
         }
         h2, .stMarkdown h2 {
             font-size: clamp(1.2em, 3vw, 1.6em) !important;
