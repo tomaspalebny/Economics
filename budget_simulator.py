@@ -1,3 +1,9 @@
+import datetime
+current_year = datetime.datetime.now().year
+# ... na konec souboru
+import streamlit as st
+st.markdown(f"<hr style='margin-top:2em;margin-bottom:0.5em;'>", unsafe_allow_html=True)
+st.markdown(f"<div style='text-align:center; color:gray; font-size:0.95em;'>© {current_year} Tomáš Paleta, Masarykova univerzita, Ekonomicko-správní fakulta, Brno</div>", unsafe_allow_html=True)
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
