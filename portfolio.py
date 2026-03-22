@@ -135,31 +135,13 @@ def compute_portfolio_history(allocations, investments, end_date_str="today"):
     eurczk_series = reindex_fx(fx_eurczk)
     eurusd_series = reindex_fx(fx_eurusd)
 
+
     # Simulate portfolio: for each investment, buy units of each asset
     # Store: {asset: number_of_units}
     holdings = {asset: 0.0 for asset in allocations if allocations[asset] > 0}
-    invested_cumulative = []
-    total_invested = 0.0
 
     records = []
     for day in all_dates:
-        # Process investments on this day
-        for inv in investments:
-            inv_date = pd.Timestamp(inv["date"])
-            if inv_date == day or (inv_date < day and inv_date >= day - timedelta(days=4) and
-                                    not any(r["date"] == day for r in records)):
-                # Find the nearest available date
-                pass
-        for inv in investments:
-            inv_date = pd.Timestamp(inv["date"])
-            # Match investment to trading day
-            if (inv_date <= day) and (inv_date > day - pd.tseries.offsets.BDay(5)):
-                already_processed = any(
-                    inv.get("_processed_on") == day for inv2 in investments for k, v in inv2.items()
-                    if k == "_processed_on" and v == day
-                )
-        total_invested = 0.0  # will calc below
-
         # Process each investment on the closest business day after investment date
         for inv in investments:
             inv_ts = pd.Timestamp(inv["date"])
@@ -167,9 +149,9 @@ def compute_portfolio_history(allocations, investments, end_date_str="today"):
                 # Check if this is the first business day >= inv_ts
                 if day >= inv_ts:
                     amount = inv["amount_czk"]
-                    # Convert CZK to USD using FX on that day
                     fx = float(usdczk_series.loc[day]) if not pd.isna(usdczk_series.loc[day]) else 25.0
                     amount_usd = amount / fx
+                    inv["_usd_spent"] = amount_usd  # uložit USD hodnotu nákupu
                     for asset in holdings:
                         if asset in price_df.columns and not pd.isna(price_df.loc[day, asset]):
                             price = float(price_df.loc[day, asset])
@@ -185,21 +167,26 @@ def compute_portfolio_history(allocations, investments, end_date_str="today"):
             if asset in price_df.columns and not pd.isna(price_df.loc[day, asset]):
                 total_usd += units * float(price_df.loc[day, asset])
 
-        # Convert to CZK and EUR
+        # Convert to CZK and EUR for display
         fx_uc = float(usdczk_series.loc[day]) if not pd.isna(usdczk_series.loc[day]) else 25.0
         fx_eu = float(eurusd_series.loc[day]) if not pd.isna(eurusd_series.loc[day]) else 0.93
         total_czk = total_usd * fx_uc
         total_eur = total_usd * fx_eu
 
-        # Calculate total invested in CZK
-        total_inv = sum(inv["amount_czk"] for inv in investments if inv.get("_processed"))
+        # Investovaná částka v USD (součet všech _usd_spent)
+        total_inv_usd = sum(inv.get("_usd_spent", 0) for inv in investments if inv.get("_processed"))
+        # Investovaná částka v CZK/EUR podle aktuálního kurzu
+        invested_czk = total_inv_usd * fx_uc
+        invested_eur = total_inv_usd * fx_eu
 
         records.append({
             "date": day,
             "total_usd": total_usd,
             "total_czk": total_czk,
             "total_eur": total_eur,
-            "invested_czk": total_inv,
+            "invested_usd": total_inv_usd,
+            "invested_czk": invested_czk,
+            "invested_eur": invested_eur,
         })
 
     result_df = pd.DataFrame(records).set_index("date")
