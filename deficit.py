@@ -333,6 +333,10 @@ with st.sidebar:
     st.selectbox("Scénář", list(PRESETS.keys()), key="preset", on_change=apply_preset)
     st.caption(PRESETS[st.session_state.preset]["description"])
 
+    st.subheader("Makroekonomické události")
+    st.multiselect("Vyber události", list(EVENTS.keys()), key="selected_events")
+    st.caption("Události upravují efektivní hodnoty modelu a ukazují, zda působí hlavně strukturálně, cyklicky, nebo smíšeně.")
+
     st.subheader("Makro blok")
     st.radio(
         "Dopočítávaná proměnná",
@@ -349,9 +353,6 @@ with st.sidebar:
     st.radio("Co držet fixní", ["Výdaje", "Strukturální saldo", "Celkové saldo"], key="anchor_mode")
     st.number_input(f"Hodnota: {st.session_state.anchor_mode}", step=10.0, key="anchor_value")
 
-    st.subheader("Makroekonomické události")
-    st.multiselect("Vyber události", list(EVENTS.keys()), key="selected_events")
-    st.caption("Události upravují efektivní hodnoty modelu a ukazují, zda působí hlavně strukturálně, cyklicky, nebo smíšeně.")
 
 base_actual = st.session_state.actual
 base_potential = st.session_state.potential
