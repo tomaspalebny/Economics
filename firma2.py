@@ -1,9 +1,30 @@
-import datetime
-current_year = datetime.datetime.now().year
-# ... na konec souboru
 import streamlit as st
-st.markdown(f"<hr style='margin-top:2em;margin-bottom:0.5em;'>", unsafe_allow_html=True)
-st.markdown(f"<div style='text-align:center; color:gray; font-size:0.95em;'>© {current_year} Tomáš Paleta, Masarykova univerzita, Ekonomicko-správní fakulta, Brno</div>", unsafe_allow_html=True)
+# Globální CSS pro responsivní velikost písma
+st.markdown(
+    """
+    <style>
+        html, body, [data-testid=\"stAppViewContainer\"] {
+            font-size: clamp(15px, 2vw, 18px) !important;
+        }
+        h1, .stMarkdown h1, .stTitle {
+            font-size: clamp(1.5em, 4vw, 2.2em) !important;
+        }
+        h2, .stMarkdown h2 {
+            font-size: clamp(1.2em, 3vw, 1.6em) !important;
+        }
+        h3, .stMarkdown h3 {
+            font-size: clamp(1.05em, 2.5vw, 1.2em) !important;
+        }
+        .stMetric label, .stMetricValue {
+            font-size: clamp(1em, 2vw, 1.2em) !important;
+        }
+        .stDataFrame, .stTable {
+            font-size: clamp(0.95em, 1.8vw, 1.1em) !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
@@ -627,3 +648,10 @@ st.markdown("""
 Built with Streamlit | Adjust parameters and watch how firm behavior changes!
 </div>
 """, unsafe_allow_html=True)
+
+
+# Dynamický copyright v patičce
+import datetime
+current_year = datetime.datetime.now().year
+st.markdown(f"<hr style='margin-top:2em;margin-bottom:0.5em;'>", unsafe_allow_html=True)
+st.markdown(f"<div style='text-align:center; color:gray; font-size:0.95em;'>© {current_year} Tomáš Paleta, Masarykova univerzita, Ekonomicko-správní fakulta, Brno</div>", unsafe_allow_html=True)
