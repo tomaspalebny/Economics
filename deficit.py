@@ -199,10 +199,6 @@ with st.sidebar:
     st.selectbox("Scénář", list(PRESETS.keys()), key="preset_name", on_change=apply_preset)
     st.caption(PRESETS[st.session_state.preset_name]["description"])
 
-    st.subheader("Makroekonomické události")
-    st.multiselect("Vyber události", list(EVENTS.keys()), key="selected_events")
-    st.caption("Události upraví efektivní hodnoty použité v modelu. Níže vždy vidíš základ i výsledné hodnoty po událostech.")
-
     st.subheader("Makro blok")
     st.radio("Dopočítávaná proměnná", ["Mezera produktu", "Skutečné HDP", "Potenciální HDP"], key="macro_target")
 
@@ -218,6 +214,10 @@ with st.sidebar:
         st.number_input("Skutečné HDP", min_value=100.0, step=50.0, key="base_actual")
         st.slider("Mezera produktu (%)", min_value=-10.0, max_value=10.0, step=0.1, key="base_gap_pct")
         st.caption("Potenciální HDP se dopočítá ze skutečného HDP a mezery produktu.")
+  
+    st.subheader("Makroekonomické události")
+    st.multiselect("Vyber události", list(EVENTS.keys()), key="selected_events")
+    st.caption("Události upraví hodnoty použité v modelu. Vždy vidíš základ i výsledné hodnoty po událostech.")
 
     st.subheader("Rozpočtový blok")
     st.slider("Příjmová kvóta při potenciálu", min_value=0.05, max_value=0.40, step=0.005, key="base_tau")
