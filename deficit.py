@@ -203,17 +203,17 @@ with st.sidebar:
     st.radio("Dopočítávaná proměnná", ["Mezera produktu", "Skutečné HDP", "Potenciální HDP"], key="macro_target")
 
     if st.session_state.macro_target == "Mezera produktu":
-        st.number_input("Skutečné HDP", min_value=100.0, step=50.0, key="base_actual")
-        st.number_input("Potenciální HDP", min_value=100.0, step=50.0, key="base_potential")
-        st.caption("Mezera produktu se dopočítá z HDP a potenciálního HDP.")
+        st.number_input("Skutečné výchozí HDP", min_value=100.0, step=50.0, key="base_actual")
+        st.number_input("Výchozí potenciální HDP", min_value=100.0, step=50.0, key="base_potential")
+        st.caption("Výchozí mezera produktu se dopočítá z HDP a potenciálního HDP.")
     elif st.session_state.macro_target == "Skutečné HDP":
-        st.number_input("Potenciální HDP", min_value=100.0, step=50.0, key="base_potential")
-        st.slider("Mezera produktu (%)", min_value=-10.0, max_value=10.0, step=0.1, key="base_gap_pct")
-        st.caption("Skutečné HDP se dopočítá z potenciálního HDP a mezery produktu.")
+        st.number_input("Výchozí potenciální HDP", min_value=100.0, step=50.0, key="base_potential")
+        st.slider("Výchozí mezera produktu (%)", min_value=-10.0, max_value=10.0, step=0.1, key="base_gap_pct")
+        st.caption("Skutečné výchozí HDP se dopočítá z potenciálního HDP a mezery produktu.")
     else:
-        st.number_input("Skutečné HDP", min_value=100.0, step=50.0, key="base_actual")
-        st.slider("Mezera produktu (%)", min_value=-10.0, max_value=10.0, step=0.1, key="base_gap_pct")
-        st.caption("Potenciální HDP se dopočítá ze skutečného HDP a mezery produktu.")
+        st.number_input("Skutečné výchozí HDP", min_value=100.0, step=50.0, key="base_actual")
+        st.slider("Výchozí mezera produktu (%)", min_value=-10.0, max_value=10.0, step=0.1, key="base_gap_pct")
+        st.caption("Výchozí potenciální HDP se dopočítá ze skutečného HDP a mezery produktu.")
   
     st.subheader("Makroekonomické události")
     st.multiselect("Vyber události", list(EVENTS.keys()), key="selected_events")
