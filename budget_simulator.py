@@ -7,66 +7,107 @@ st.set_page_config(page_title="Makroekonomický simulátor rozpočtu – detailn
 st.title("🏛️ Simulátor státního rozpočtu")
 st.markdown("*Detailnější verze – příjmy i výdaje po hlavních kapitolách veřejných financí*")
 
+# ============================================================
+# PRESETS – kalibrováno na data vládního sektoru 2024
+# Zdroje: Eurostat, ČSÚ, CBO (USA), RRZ (SR), MinFin RU
+# ============================================================
+# Celkové příjmy / výdaje (% HDP):
+#   ČR:  příjmy 42.9 %, výdaje 45.1 %, saldo -2.2 %  (ČSÚ / Eurostat 2024)
+#   SR:  příjmy 40.8 %, výdaje 46.1 %, saldo -5.3 %  (RRZ 2024)
+#   DE:  příjmy 46.1 %, výdaje 49.4 %, saldo -3.1 %  (Eurostat / Bundesfinanzmin. 2024)
+#   US:  příjmy 17.1 %, výdaje 23.4 %, saldo -6.3 %  (CBO FY2024)
+#   RU:  příjmy 18.4 %, výdaje 20.2 %, saldo -1.7 %  (MinFin RU 2024)
+# ============================================================
 PRESETS = {
     "🇨🇿 Česká republika": dict(
-        gdp=7800, pop=10.9, workforce=5.35, unemployment_rate=2.8, pensioners=2.88, outside_lf=2.52,
-        avg_wage_month=45500, income_tax_rate=15.0, employer_social=33.8, employee_social=11.0,
+        # Makro: HDP 2024 ~7 800 mld CZK, deficit -2.2 % HDP (ČSÚ)
+        gdp=7800, pop=10.9, workforce=5.42, unemployment_rate=2.7, pensioners=2.90, outside_lf=2.45,
+        avg_wage_month=46700, income_tax_rate=15.0, employer_social=33.8, employee_social=11.6,
         vat_high=21.0, vat_low=12.0, vat_high_share=65.0, corporate_tax=21.0,
-        pension_month=20700, unemployment_benefit_month=14000,
-        debt_to_gdp=44.0, interest_rate=3.8,
-        health_pct=7.6, defense_pct=2.1, education_pct=4.5,
-        consumption_share=48.0, corp_profit_share=22.0, eff_coverage=85.0,
-        excise_pct=3.2, property_pct=0.4, customs_pct=0.2, environmental_pct=0.7, fees_pct=1.1, grants_pct=1.1, nontax_pct=4.0,
-        family_pct=3.1, sickness_pct=1.2, housing_pct=0.8, public_order_pct=1.8, transport_pct=2.4, environment_exp_pct=0.8,
-        agriculture_pct=0.9, admin_pct=3.2, subsidies_pct=3.7, culture_pct=0.7, currency="CZK mld"
+        pension_month=21400, unemployment_benefit_month=14500,
+        # Dluh 43.3 % HDP (Eurostat 2024), průměrný výnos ~3.8 %
+        debt_to_gdp=43.3, interest_rate=3.8,
+        # Výdaje % HDP – dle Eurostat COFOG 2024 / MFČR
+        health_pct=7.5, defense_pct=2.1, education_pct=4.5,
+        # Kalibrační parametry
+        consumption_share=48.0, corp_profit_share=22.0, eff_coverage=86.0,
+        # Ostatní příjmy – spotřební daně (3.1 %), majetkové (0.4 %), cla (0.2 %),
+        # enviro (0.7 %), poplatky (1.1 %), granty EU (1.3 %), nedaňové (4.0 %)
+        excise_pct=3.1, property_pct=0.4, customs_pct=0.2, environmental_pct=0.7,
+        fees_pct=1.1, grants_pct=1.3, nontax_pct=4.0,
+        # Výdaje % HDP
+        family_pct=3.2, sickness_pct=1.3, housing_pct=0.8, public_order_pct=1.8,
+        transport_pct=2.4, environment_exp_pct=0.8, agriculture_pct=0.8,
+        admin_pct=3.1, subsidies_pct=3.2, culture_pct=0.7, currency="CZK mld"
     ),
     "🇸🇰 Slovensko": dict(
-        gdp=133, pop=5.43, workforce=2.58, unemployment_rate=5.7, pensioners=1.15, outside_lf=1.54,
-        avg_wage_month=1580, income_tax_rate=19.0, employer_social=35.2, employee_social=13.4,
+        # Makro: HDP 2024 ~130 mld EUR, deficit -5.3 % HDP (RRZ 2024)
+        gdp=130, pop=5.46, workforce=2.60, unemployment_rate=5.5, pensioners=1.17, outside_lf=1.55,
+        avg_wage_month=1600, income_tax_rate=19.0, employer_social=35.2, employee_social=13.4,
         vat_high=23.0, vat_low=10.0, vat_high_share=70.0, corporate_tax=21.0,
-        pension_month=660, unemployment_benefit_month=450,
-        debt_to_gdp=59.0, interest_rate=3.4,
-        health_pct=7.2, defense_pct=2.0, education_pct=4.2,
+        pension_month=680, unemployment_benefit_month=460,
+        # Dluh ~59.7 % HDP (Eurostat 2024)
+        debt_to_gdp=59.7, interest_rate=3.6,
+        health_pct=7.8, defense_pct=2.0, education_pct=4.3,
         consumption_share=50.0, corp_profit_share=20.0, eff_coverage=85.0,
-        excise_pct=2.7, property_pct=0.5, customs_pct=0.2, environmental_pct=0.5, fees_pct=0.8, grants_pct=1.0, nontax_pct=1.6,
-        family_pct=3.6, sickness_pct=1.3, housing_pct=0.6, public_order_pct=1.5, transport_pct=2.8, environment_exp_pct=0.9,
-        agriculture_pct=1.0, admin_pct=3.0, subsidies_pct=6.0, culture_pct=0.6, currency="EUR mld"
+        excise_pct=2.7, property_pct=0.5, customs_pct=0.2, environmental_pct=0.5,
+        fees_pct=0.8, grants_pct=1.2, nontax_pct=1.1,
+        family_pct=3.8, sickness_pct=1.4, housing_pct=0.6, public_order_pct=1.5,
+        transport_pct=2.6, environment_exp_pct=0.9, agriculture_pct=1.0,
+        admin_pct=3.0, subsidies_pct=5.5, culture_pct=0.6, currency="EUR mld"
     ),
     "🇩🇪 Německo": dict(
-        gdp=4260, pop=84.7, workforce=42.0, unemployment_rate=6.1, pensioners=21.2, outside_lf=16.8,
-        avg_wage_month=4580, income_tax_rate=30.0, employer_social=20.8, employee_social=20.3,
+        # Makro: HDP 2024 ~4 100 mld EUR, deficit -3.1 % HDP (Eurostat / Bundesfinanzmin.)
+        gdp=4100, pop=84.5, workforce=43.5, unemployment_rate=6.0, pensioners=21.5, outside_lf=15.8,
+        avg_wage_month=4750, income_tax_rate=30.0, employer_social=20.8, employee_social=20.3,
         vat_high=19.0, vat_low=7.0, vat_high_share=75.0, corporate_tax=30.0,
-        pension_month=1550, unemployment_benefit_month=1100,
-        debt_to_gdp=63.0, interest_rate=2.4,
-        health_pct=9.6, defense_pct=2.1, education_pct=4.6,
+        pension_month=1600, unemployment_benefit_month=1150,
+        # Dluh 62.2 % HDP (Eurostat 2024)
+        debt_to_gdp=62.2, interest_rate=2.6,
+        health_pct=9.6, defense_pct=2.1, education_pct=4.7,
         consumption_share=48.0, corp_profit_share=13.0, eff_coverage=55.0,
-        excise_pct=2.2, property_pct=1.0, customs_pct=0.3, environmental_pct=1.8, fees_pct=1.1, grants_pct=0.9, nontax_pct=6.2,
-        family_pct=3.3, sickness_pct=1.5, housing_pct=0.5, public_order_pct=1.7, transport_pct=1.8, environment_exp_pct=0.8,
-        agriculture_pct=0.8, admin_pct=3.0, subsidies_pct=7.1, culture_pct=0.9, currency="EUR mld"
+        excise_pct=2.2, property_pct=1.0, customs_pct=0.3, environmental_pct=1.8,
+        fees_pct=1.1, grants_pct=0.5, nontax_pct=6.4,
+        family_pct=3.4, sickness_pct=1.6, housing_pct=0.6, public_order_pct=1.8,
+        transport_pct=1.8, environment_exp_pct=0.8, agriculture_pct=0.7,
+        admin_pct=3.0, subsidies_pct=7.2, culture_pct=0.9, currency="EUR mld"
     ),
     "🇺🇸 USA": dict(
-        gdp=29200, pop=336.0, workforce=161.0, unemployment_rate=4.0, pensioners=57.0, outside_lf=111.3,
-        avg_wage_month=5400, income_tax_rate=22.0, employer_social=7.65, employee_social=7.65,
+        # Makro: příjmy 17.1 % HDP, výdaje 23.4 % HDP, saldo -6.3 % HDP (CBO FY2024)
+        # HDP FY2024 ~28 700 mld USD, dluh ~98 % HDP
+        gdp=28700, pop=336.0, workforce=161.5, unemployment_rate=4.1, pensioners=57.0, outside_lf=110.3,
+        avg_wage_month=5600, income_tax_rate=22.0, employer_social=7.65, employee_social=7.65,
         vat_high=0.0, vat_low=0.0, vat_high_share=100.0, corporate_tax=21.0,
-        pension_month=1900, unemployment_benefit_month=1400,
-        debt_to_gdp=124.0, interest_rate=4.4,
+        pension_month=1950, unemployment_benefit_month=1450,
+        # Dluh 98 % HDP (CBO 2024), průměrný výnos dluhu ~4.4 %
+        debt_to_gdp=98.0, interest_rate=4.4,
+        # Health = Medicare+Medicaid ~8.5 %, Defense 3.4 %, Education 5.0 %
         health_pct=8.5, defense_pct=3.4, education_pct=5.0,
         consumption_share=68.0, corp_profit_share=12.0, eff_coverage=80.0,
-        excise_pct=0.7, property_pct=3.0, customs_pct=0.3, environmental_pct=0.2, fees_pct=1.5, grants_pct=0.0, nontax_pct=14.1,
-        family_pct=1.8, sickness_pct=0.8, housing_pct=0.5, public_order_pct=2.0, transport_pct=1.5, environment_exp_pct=0.4,
-        agriculture_pct=0.3, admin_pct=2.1, subsidies_pct=1.1, culture_pct=0.3, currency="USD mld"
+        # US nemá DPH – většina spotřební daně přes státní sales tax (federálně minimální)
+        excise_pct=0.6, property_pct=3.1, customs_pct=0.2, environmental_pct=0.1,
+        fees_pct=1.5, grants_pct=0.0, nontax_pct=2.6,
+        family_pct=1.8, sickness_pct=0.8, housing_pct=0.5, public_order_pct=2.0,
+        transport_pct=1.5, environment_exp_pct=0.3, agriculture_pct=0.4,
+        admin_pct=2.2, subsidies_pct=1.0, culture_pct=0.3, currency="USD mld"
     ),
     "🇷🇺 Rusko": dict(
-        gdp=199000, pop=146.0, workforce=73.5, unemployment_rate=2.4, pensioners=36.0, outside_lf=34.7,
-        avg_wage_month=85000, income_tax_rate=13.0, employer_social=30.0, employee_social=0.0,
-        vat_high=22.0, vat_low=10.0, vat_high_share=70.0, corporate_tax=25.0,
-        pension_month=23400, unemployment_benefit_month=12800,
-        debt_to_gdp=18.0, interest_rate=8.5,
-        health_pct=3.7, defense_pct=6.3, education_pct=3.6,
+        # Makro: příjmy 36.7 bil RUB, výdaje 40.2 bil RUB, saldo -1.7 % HDP (MinFin RU 2024)
+        # HDP 2024 ~198 000 mld RUB (odhad MF RU), dluh ~16.7 % HDP
+        gdp=198000, pop=146.0, workforce=73.5, unemployment_rate=2.4, pensioners=36.5, outside_lf=34.2,
+        avg_wage_month=89000, income_tax_rate=13.0, employer_social=30.0, employee_social=0.0,
+        vat_high=20.0, vat_low=10.0, vat_high_share=70.0, corporate_tax=25.0,
+        pension_month=24500, unemployment_benefit_month=13500,
+        # Dluh 16.7 % HDP (TradingEconomics / MinFin 2024), sazba ~8.5 %
+        debt_to_gdp=16.7, interest_rate=8.5,
+        # Obrana 6.3–7 % HDP (2024 – válka), zdraví 3.7 %, vzdělání 3.6 %
+        health_pct=3.8, defense_pct=7.0, education_pct=3.6,
         consumption_share=45.0, corp_profit_share=18.0, eff_coverage=50.0,
-        excise_pct=2.4, property_pct=0.6, customs_pct=1.3, environmental_pct=0.3, fees_pct=1.0, grants_pct=0.1, nontax_pct=6.9,
-        family_pct=1.8, sickness_pct=0.8, housing_pct=0.9, public_order_pct=2.2, transport_pct=1.6, environment_exp_pct=0.4,
-        agriculture_pct=0.7, admin_pct=2.2, subsidies_pct=3.8, culture_pct=0.5, currency="RUB mld"
+        excise_pct=2.5, property_pct=0.6, customs_pct=1.2, environmental_pct=0.3,
+        fees_pct=1.0, grants_pct=0.0, nontax_pct=5.4,
+        family_pct=1.8, sickness_pct=0.7, housing_pct=0.9, public_order_pct=2.4,
+        transport_pct=1.5, environment_exp_pct=0.4, agriculture_pct=0.8,
+        admin_pct=2.0, subsidies_pct=3.5, culture_pct=0.5, currency="RUB mld"
     ),
     "⚙️ Vlastní": dict(
         gdp=1000, pop=10.0, workforce=5.0, unemployment_rate=5.0, pensioners=2.0, outside_lf=2.74,
@@ -348,4 +389,8 @@ st.markdown(f"- Celkové výdaje: **{total_expenditure:,.1f} {cur}** ({total_exp
 st.markdown(f"- Saldo: **{balance:,.1f} {cur}** ({balance_gdp_pct:+.1f}% HDP)")
 
 st.markdown("---")
-st.caption("⚠️ Výukový model. Kapitoly jsou detailnější než v původní verzi, ale stále jde o zjednodušenou aproximaci veřejných financí.")
+st.caption("""⚠️ Výukový model, zjednodušená aproximace veřejných financí.
+Presety kalibrované na data vládního sektoru 2024:
+ČR: ČSÚ (deficit/dluh), Eurostat COFOG (struktura výdajů) | SR: RRZ (deficit -5.3 % HDP), Eurostat |
+DE: Eurostat / Bundesfinanzministerium | USA: CBO FY2024 (příjmy 17.1 %, výdaje 23.4 % HDP, dluh 98 %) |
+RU: Ministerstvo financí RF (příjmy 36.7 bil RUB, saldo -1.7 % HDP)""")
