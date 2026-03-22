@@ -261,7 +261,7 @@ with st.sidebar:
             cat_assets = {k: v for k, v in available_assets.items() if v["category"] == cat}
             for asset_name in cat_assets:
                 weights_input[asset_name] = st.slider(
-                    asset_name, 0, 100, 0, 5, key=f"w_{asset_name}"
+                    asset_name, 0, 100, 0, 1, key=f"w_{asset_name}"
                 )
 
         total_weight = sum(weights_input.values())
