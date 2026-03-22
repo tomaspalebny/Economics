@@ -257,17 +257,6 @@ budget = compute_budget(
     events_total["cyclical_spending_delta"],
 )
 
-with st.sidebar:
-    st.markdown("---")
-    st.subheader("Použité hodnoty v modelu")
-    col1, col2 = st.columns(2)
-    col1.metric("HDP", fmt_money(actual), delta=fmt_money(actual - base_actual))
-    col2.metric("Potenciál", fmt_money(potential), delta=fmt_money(potential - base_potential))
-    col3, col4 = st.columns(2)
-    col3.metric("Mezera", fmt_pct(gap_pct), delta=fmt_pct(gap_pct - base_gap_pct))
-    col4.metric("Tau", fmt_pct(tau * 100), delta=fmt_pct((tau - st.session_state.base_tau) * 100))
-    st.metric("Elasticita", f"{eta:.2f}", delta=f"{eta - st.session_state.base_eta:+.2f}")
-
 st.title("Simulátor cyklické a strukturální složky salda státního rozpočtu")
 st.write("Základní vstupy zadáváš v levém panelu. Hlavní panel pracuje se stejnými hodnotami; pokud vybereš události, v levém panelu se zároveň ukáže jejich efektivní dopad na model.")
 
