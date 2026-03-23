@@ -503,8 +503,4 @@ Nezahrnuje rozpočty krajů, obcí ani zdravotních pojišťoven.
 Zdravotní pojištění je odděleno – jde do ZP, ne do SR.
 Presety kalibrované na data 2024: ČR – MFČR (příjmy 2 056, výdaje 2 327, saldo −271 mld CZK) |
 SR – MF SR | DE – Bundeshaushalt | USA – CBO FY2024 | RU – MinFin RF.
-# Dynamický copyright v patičce
-import datetime
-current_year = datetime.datetime.now().year
-st.markdown(f"<hr style='margin-top:2em;margin-bottom:0.5em;'>", unsafe_allow_html=True)
-st.markdown(f"<div style='text-align:center; color:gray; font-size:0.95em;'>© {current_year} Tomáš Paleta, Masarykova univerzita, Ekonomicko-správní fakulta, Brno</div>", unsafe_allow_html=True)
+© {datetime.datetime.now().year}""")
