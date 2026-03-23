@@ -4,6 +4,18 @@ import plotly.graph_objects as go
 import pandas as pd
 
 st.set_page_config(page_title="Simulátor veřejných financí ČR", layout="wide", page_icon="🏛️")
+
+# Session state pro reset
+if "reset" not in st.session_state:
+    st.session_state.reset = False
+
+def do_reset():
+    st.session_state.reset = True
+    # Vymaže všechny widget klíče aby se načetly defaulty
+    for key in list(st.session_state.keys()):
+        if key != "reset":
+            del st.session_state[key]
+
 st.title("🏛️ Simulátor veřejných financí")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -84,7 +96,7 @@ GS_EXP_PCT = {
     "Bydlení a územní rozvoj":               0.4,
     "Obsluha dluhu":                         1.4,
     "Odvody do EU":                          0.8,
-    "Ostatní výdaje":                        2.3,
+    "Ostatní výdaje":                        6.6,
 }
 
 DEBT_SR  = 3613.6    # mld Kč, státní dluh plán 2025 dle MFČR
@@ -94,13 +106,17 @@ DEBT_GS  = GDP_DEFAULT * 44.3 / 100  # vládní sektor dluh odhad 2025
 # SIDEBAR
 # ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
+    if st.button("🔄 Reset na výchozí hodnoty", use_container_width=True, type="primary"):
+        do_reset()
+        st.rerun()
+    st.markdown("---")
     st.header("⚙️ Makro parametry")
-    gdp = st.number_input("HDP (mld Kč)", min_value=1000.0, max_value=20000.0,
+    gdp = st.number_input("HDP (mld Kč)", min_value=1000.0, max_value=20000.0,, key="w_gdp"
                           value=GDP_DEFAULT, step=100.0, format="%.0f",
                           help="HDP ČR 2025 – MFČR odhad 8 400 mld Kč")
     workforce  = st.number_input("Zaměstnaní (mil.)", 1.0, 10.0, WORKFORCE, 0.01, "%.2f")
-    pensioners = st.number_input("Důchodci (mil.)", 0.5, 5.0, PENSIONERS, 0.01, "%.2f")
-    unemployed = st.number_input("Nezaměstnaní (mil.)", 0.0, 2.0, UNEMPLOYED, 0.01, "%.2f")
+    pensioners = st.number_input("Důchodci (mil.)", 0.5, 5.0, PENSIONERS, 0.01, "%.2f", key="w_pensioners")
+    unemployed = st.number_input("Nezaměstnaní (mil.)", 0.0, 2.0, UNEMPLOYED, 0.01, "%.2f", key="w_unemployed")
     avg_wage   = st.number_input("Průměrná mzda (Kč/měs.)", 20000, 150000, AVG_WAGE, 500)
     avg_pension= st.number_input("Průměrný důchod (Kč/měs.)", 5000, 60000, AVG_PENSION, 100)
     avg_unemp  = st.number_input("Podpora v nezam. (Kč/měs.)", 0, 40000, AVG_UNEMP, 100)
@@ -108,7 +124,7 @@ with st.sidebar:
     st.markdown("---")
     st.header("📐 Daňové sazby (%)")
     vat_basic   = st.slider("DPH základní", 0, 35, 21)
-    vat_reduced = st.slider("DPH snížená", 0, 25, 12)
+    vat_reduced = st.slider("DPH snížená", 0, 25, 12, key="w_vat_reduced")
     dpfo_rate   = st.slider("DPFO (zákonná)", 0, 50, 15)
     dppo_rate   = st.slider("DPPO", 0, 40, 21)
     soc_emp     = st.slider("Pojistné – zaměstnavatel (%)", 0, 50, 34)
@@ -116,11 +132,11 @@ with st.sidebar:
 
     st.markdown("---")
     st.header("🏦 Dluh")
-    debt_sr_mld = st.number_input("Státní dluh (mld Kč)", 0.0, 10000.0, DEBT_SR, 10.0, "%.0f")
-    debt_gs_mld = st.number_input("Dluh vládního sektoru (mld Kč)", 0.0, 12000.0,
+    debt_sr_mld = st.number_input("Státní dluh (mld Kč)", 0.0, 10000.0, DEBT_SR, 10.0, "%.0f", key="w_debt_sr")
+    debt_gs_mld = st.number_input("Dluh vládního sektoru (mld Kč)", 0.0, 12000.0,, key="w_debt_gs"
                                    round(DEBT_GS, 0), 10.0, "%.0f")
-    interest_sr = st.slider("Úr. sazba – státní dluh (%)", 0.0, 15.0, 2.8, 0.1)
-    interest_gs = st.slider("Úr. sazba – vládní sektor (%)", 0.0, 15.0, 3.0, 0.1)
+    interest_sr = st.slider("Úr. sazba – státní dluh (%)", 0.0, 15.0, 2.8, 0.1, key="w_interest_sr")
+    interest_gs = st.slider("Úr. sazba – vládní sektor (%)", 0.0, 15.0, 3.0, 0.1, key="w_interest_gs")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # POMOCNÉ FUNKCE
