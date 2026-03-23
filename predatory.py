@@ -149,17 +149,44 @@ st.dataframe(df_costs, use_container_width=True, hide_index=True)
 fig = go.Figure()
 benchmarks = {"AVC": AVC, "AAC": AAC, "LRAIC": LRAIC, "ATC": ATC}
 colors_bench = {"AVC": "#e74c3c", "AAC": "#e67e22", "LRAIC": "#3498db", "ATC": "#2ecc71"}
+
+all_values = [AVC, AAC, LRAIC, ATC, price]
+y_min = min(all_values) * 0.7
+y_max = max(all_values) * 1.3
+
 for name, val in benchmarks.items():
-    fig.add_hline(y=val, line_dash="dash", line_color=colors_bench[name],
-                  annotation_text=f"{name} = {val:.2f}", annotation_position="left")
+    fig.add_trace(go.Scatter(
+        x=[0, 1], y=[val, val],
+        mode="lines",
+        line=dict(dash="dash", color=colors_bench[name], width=2),
+        name=f"{name} = {val:.2f} Kc",
+        showlegend=True,
+        hoverinfo="name+y",
+    ))
 
 fig.add_trace(go.Bar(
-    x=[f"Cena {product}"], y=[price],
+    x=[0.5], y=[price], width=[0.35],
     marker_color="#9b59b6" if price < AVC else ("#f39c12" if price < ATC else "#27ae60"),
-    text=[f"{price:.2f} Kc"], textposition="outside", name="Cena"
+    text=[f"Cena: {price:.2f} Kc"], textposition="outside",
+    name=f"Cena {product}",
+    showlegend=True,
 ))
-fig.update_layout(title="Cena vs. nakladove benchmarky", yaxis_title="Kc / jednotka",
-                  height=420, showlegend=False)
+fig.update_layout(
+    title="Cena vs. nakladove benchmarky",
+    yaxis_title="Kc / jednotka",
+    yaxis=dict(range=[y_min, y_max]),
+    xaxis=dict(visible=False),
+    height=480,
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="center",
+        x=0.5,
+        font=dict(size=13),
+    ),
+    margin=dict(l=60, r=30, t=80, b=30),
+)
 st.plotly_chart(fig, use_container_width=True)
 
 # -- 2) Klasicky AKZO test --
