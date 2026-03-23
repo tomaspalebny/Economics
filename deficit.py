@@ -336,3 +336,8 @@ fig_line.add_trace(go.Scatter(x=line_df["gap"], y=line_df["cyclical"], mode="lin
 fig_line.add_vline(x=gap_pct, line_width=1.5, line_dash="dot")
 fig_line.update_layout(height=420, margin=dict(l=10, r=10, t=20, b=10), xaxis_title="Mezera produktu (%)", yaxis_title="mld. Kč")
 st.plotly_chart(fig_line, use_container_width=True)
+# Dynamický copyright v patičce
+import datetime
+current_year = datetime.datetime.now().year
+st.markdown(f"<hr style='margin-top:2em;margin-bottom:0.5em;'>", unsafe_allow_html=True)
+st.markdown(f"<div style='text-align:center; color:gray; font-size:0.95em;'>© {current_year} Tomáš Paleta, Masarykova univerzita, Ekonomicko-správní fakulta, Brno</div>", unsafe_allow_html=True)
