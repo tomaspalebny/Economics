@@ -364,3 +364,8 @@ with tab4:
 
 st.markdown("---")
 st.caption("⚠️ Data pochází ze služby Yahoo Finance. Historická výkonnost nezaručuje budoucí výnosy. Pouze pro vzdělávací účely.")
+# Dynamický copyright v patičce
+import datetime
+current_year = datetime.datetime.now().year
+st.markdown(f"<hr style='margin-top:2em;margin-bottom:0.5em;'>", unsafe_allow_html=True)
+st.markdown(f"<div style='text-align:center; color:gray; font-size:0.95em;'>© {current_year} Tomáš Paleta, Masarykova univerzita, Ekonomicko-správní fakulta, Brno</div>", unsafe_allow_html=True)
