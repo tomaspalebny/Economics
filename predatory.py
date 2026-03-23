@@ -371,3 +371,9 @@ st.caption(
     "Aplikace pro vyukove ucely | Zdroje: AKZO (C-62/86), France Telecom (C-202/07 P), "
     "Qualcomm (T-671/19), Post Danmark (C-209/10), Guidance on Enforcement Priorities (2009)"
 )
+
+# Dynamický copyright v patičce
+import datetime
+current_year = datetime.datetime.now().year
+st.markdown(f"<hr style='margin-top:2em;margin-bottom:0.5em;'>", unsafe_allow_html=True)
+st.markdown(f"<div style='text-align:center; color:gray; font-size:0.95em;'>© {current_year} Tomáš Paleta, Masarykova univerzita, Ekonomicko-správní fakulta, Brno</div>", unsafe_allow_html=True)
