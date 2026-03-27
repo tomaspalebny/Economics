@@ -5,12 +5,11 @@ st.set_page_config(page_title="Economics App Hub", layout="wide")
 
 APPS = {
     "Makroekonomie": [
-        {"name": "Makroekonomicky simulator rozpoctu", "url": "https://economics-paleta.streamlit.app/"},
-        {"name": "Deficit simulator", "url": "https://economics-deficit.streamlit.app/"},
+        {"name": "Makroekonomicky simulator rozpoctu mezinárodní", "url": "https://economics-paleta.streamlit.app/"},
+        {"name": "Struktura deficitu - simulator", "url": "https://economics-deficit.streamlit.app/"},
         {"name": "Smenarna Realny kurz & PPP", "url": "https://economics-real.streamlit.app/"},
         {"name": "ADAS", "url": "https://economics-adas.streamlit.app/"},
-        {"name": "Public sector", "url": "https://economics-publsec.streamlit.app/"},
-        {"name": "Budget 2", "url": "https://economics-bud2.streamlit.app/"},
+        {"name": "Rozpočet a veřejný sektor ČR", "url": "https://economics-publsec.streamlit.app/"},
         {"name": "Portfolio", "url": "https://economics-portfolio.streamlit.app/"},
     ],
     "Mikroekonomie": [
