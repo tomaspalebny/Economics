@@ -9,16 +9,19 @@ APPS = {
         {"name": "Deficit simulator", "url": "https://economics-deficit.streamlit.app/"},
         {"name": "Smenarna Realny kurz & PPP", "url": "https://economics-real.streamlit.app/"},
         {"name": "ADAS", "url": "https://economics-adas.streamlit.app/"},
+        {"name": "Public sector", "url": "https://economics-publsec.streamlit.app/"},
+        {"name": "Budget 2", "url": "https://economics-bud2.streamlit.app/"},
+        {"name": "Portfolio", "url": "https://economics-portfolio.streamlit.app/"},
     ],
     "Mikroekonomie": [
         {"name": "Predatorske ceny AKZO & moderni test", "url": "https://economics-predator.streamlit.app/"},
         {"name": "Koncentrace", "url": "https://economics-koncentrace.streamlit.app/"},
-        {"name": "Public sector", "url": "https://economics-publsec.streamlit.app/"},
-        {"name": "Portfolio", "url": "https://economics-portfolio.streamlit.app/"},
-        {"name": "Budget 2", "url": "https://economics-bud2.streamlit.app/"},
         {"name": "Firma", "url": "https://economics-firma.streamlit.app/"},
         {"name": "Firma 2", "url": "https://economics-firma2.streamlit.app/"},
     ],
+    "Soutěž": [
+        {"name": "Predatorske ceny AKZO & moderni test", "url": "https://economics-predator.streamlit.app/"},
+        {"name": "Koncentrace", "url": "https://economics-koncentrace.streamlit.app/"},    ],
     "Hry": [
         {"name": "Ceska ekonomika: Hra", "url": "https://simeon-game.streamlit.app/"},
     ],
